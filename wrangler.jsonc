@@ -1,0 +1,55 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "otpless-auth-service",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-19",
+  // "compatibility_flags": [
+  //   "nodejs_compat"
+  // ],
+  // Environment variables for authentication
+  // "vars": {
+  //   "JWT_SECRET": "your-jwt-secret",
+  //   "OTPLESS_CLIENT_ID": "your-otpless-client-id",
+  //   "OTPLESS_CLIENT_SECRET": "your-otpless-client-secret",
+  //   "OTPLESS_API_URL": "https://api.otpless.app"
+  // },
+  // KV namespace for session storage
+  "kv_namespaces": [
+    {
+      "binding": "AUTH_KV",
+      "id": "your-kv-namespace-id",
+      "preview_id": "your-preview-kv-namespace-id"
+    }
+  ],
+  // R2 bucket for asset storage (optional)
+  // "r2_buckets": [
+  //   {
+  //     "binding": "ASSETS_BUCKET",
+  //     "bucket_name": "auth-assets"
+  //   }
+  // ],
+  // D1 database for user data
+  // "d1_databases": [
+  //   {
+  //     "binding": "DB",
+  //     "database_name": "auth-database",
+  //     "database_id": "your-d1-database-id"
+  //   }
+  // ],
+  // Queue for background tasks (optional)
+  // "queues": {
+  //   "producers": [
+  //     {
+  //       "binding": "AUTH_QUEUE",
+  //       "queue": "auth-queue"
+  //     }
+  //   ]
+  // },
+  // "ai": {
+  //   "binding": "AI"
+  // },
+  // "observability": {
+  //   "enabled": true,
+  //   "head_sampling_rate": 1
+  // }
+}
