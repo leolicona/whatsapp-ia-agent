@@ -11,7 +11,7 @@ handler.ts: Contains the business logic for handling requests, interacting with 
 
 schema.ts: Houses data validation schemas (e.g., using Zod) for request bodies and parameters e.g. auth.schema.ts
 
-middleware/: Store reusable Hono middleware functions here (e.g., auth.ts for JWT verification, logger.ts for request logging, error-handler.ts for global error handling).
+middleware/: Store reusable Hono middleware functions here (e.g., auth.ts for JWT verification, logger.ts for request logging, error.handler.ts for global error handling).
 
 utils/: For general utility functions that don't fit into a specific route or middleware (e.g., jwt.ts for token handling, db.ts for database client setup).
 
