@@ -45,13 +45,13 @@
   //   }
   // ],
   // D1 database for user data
-  // "d1_databases": [
-  //   {
-  //     "binding": "DB",
-  //     "database_name": "auth-database",
-  //     "database_id": "your-d1-database-id"
-  //   }
-  // ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "whatsapp-auth-db",
+      "database_id": "3e0dd492-4db4-48ef-bca6-2d1d40ddf69f"
+    }
+  ],
   // Queue for background tasks (optional)
   // "queues": {
   //   "producers": [
