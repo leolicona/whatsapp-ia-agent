@@ -8,6 +8,12 @@ export interface Env {
   OTPLESS_CLIENT_SECRET: string;
   OTPLESS_API_URL: string;
   
+  // WhatsApp Cloud API configuration
+  WHATSAPP_API_VERSION: string;
+  WHATSAPP_VERIFY_TOKEN: string;
+  WHATSAPP_API_TOKEN: string;
+  WHATSAPP_PHONE_NUMBER_ID: string;
+  
   // Cloudflare KV namespace for session storage
   AUTH_KV: KVNamespace;
   
@@ -22,6 +28,9 @@ export interface Env {
   
   // Optional: Queue for background tasks
   AUTH_QUEUE?: Queue;
+  
+  // Durable Object for webhook processing
+  WEBHOOK_PROCESSOR: DurableObjectNamespace;
 }
 
 // Extend the Hono Context type to include our environment

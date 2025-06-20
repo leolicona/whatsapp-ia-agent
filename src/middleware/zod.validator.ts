@@ -1,5 +1,5 @@
-import { zValidator } from '@hono/zod-validator'
 import { Context } from 'hono'
+import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 
 interface ValidationError {

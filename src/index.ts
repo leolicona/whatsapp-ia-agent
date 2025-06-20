@@ -5,6 +5,10 @@ import { securityHeaders } from './middleware/security.headers'
 import { rateLimitPresets } from './middleware/rate.limit'
 import { globalErrorHandler } from './middleware/error.handler'
 import { auth } from './routes/auth'
+import { webhook } from './routes/webhook'
+
+// Export Durable Object classes
+export { WebhookProcessor } from './routes/webhook/webhook.processorDO'
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -22,6 +26,9 @@ app.use('*', rateLimitPresets.moderate)
 
 // Mount auth routes
 app.route('/auth', auth)
+
+// Mount webhook routes
+app.route('/api/webhook', webhook)
 
 // Basic routes
 app.get('/', (c) => {

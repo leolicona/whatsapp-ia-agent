@@ -17,8 +17,24 @@
   "kv_namespaces": [
     {
       "binding": "AUTH_KV",
-      "id": "your-kv-namespace-id",
-      "preview_id": "your-preview-kv-namespace-id"
+      "id": "6b181a838c5543e7be9ea089c1018c9b",
+      "preview_id": "cc4ce63f8b9a4a3997702a8f634b5c1e"
+    }
+  ],
+  // Durable Objects for webhook processing
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "WEBHOOK_PROCESSOR",
+        "class_name": "WebhookProcessor"
+      }
+    ]
+  },
+  // Migrations for Durable Objects
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["WebhookProcessor"]
     }
   ],
   // R2 bucket for asset storage (optional)
