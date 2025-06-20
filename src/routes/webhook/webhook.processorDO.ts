@@ -6,6 +6,7 @@ import {
   isTextMessage,
   MessageProcessingResult
 } from '../../schemas/whatsapp.webhook.schema';
+import { CtaUrlInteractiveObject, CtaUrlMessagePayload, CtaUrlMessagePayloadSchema } from '../../schemas/whatsapp.interactive.schema';
 import { Env } from '../../bindings';
 
 
@@ -64,15 +65,40 @@ export class WebhookProcessor extends DurableObject {
               await this.markMessageAsRead(message.id)
               await this.sendTypingIndicator(message.id);
               
-              await this.sendMessage(
-                  cleanPhoneNumber(contact.wa_id),
-                  {
-                      type: "text",
-                      text: {
-                          body: message.text.body
-                      }
+              if (message.text.body.toLowerCase() === 'cta') {
+                await this.sendCtaUrlMessage(cleanPhoneNumber(contact.wa_id), {
+                  type: 'cta_url',
+                  header: {
+                    type: 'image',
+                    image: {
+                      link: 'https://www.luckyshrub.com/assets/lucky-shrub-banner-logo-v1.png'
+                    }
+                  },
+                  body: {
+                    text: 'Tap the button below to see available dates.'
+                  },
+                  action: {
+                    name: 'cta_url',
+                    parameters: {
+                      display_text: 'See Dates',
+                      url: 'https://www.luckyshrub.com?clickID=kqDGWd24Q5TRwoEQTICY7W1JKoXvaZOXWAS7h1P76s0R7Paec4'
+                    }
+                  },
+                  footer: {
+                    text: 'Dates subject to change.'
                   }
-              );
+                });
+              } else {
+                await this.sendMessage(
+                    cleanPhoneNumber(contact.wa_id),
+                    {
+                        type: "text",
+                        text: {
+                            body: message.text.body
+                        }
+                    }
+                );
+              }
               
               // Store successful processing result
               await this.ctx.storage.put(`message:${message.id}`, {
@@ -133,6 +159,21 @@ export class WebhookProcessor extends DurableObject {
           ...message,
       };
       await this.whatsAppApiRequest(body);
+  }
+
+  async sendCtaUrlMessage(to: string, interactive: CtaUrlInteractiveObject): Promise<void> {
+    const body: CtaUrlMessagePayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to,
+        type: "interactive",
+        interactive,
+    };
+
+    // Validate the payload before sending
+    CtaUrlMessagePayloadSchema.parse(body);
+
+    await this.whatsAppApiRequest(body);
   }
 
   async sendTypingIndicator(messageId: string): Promise<void> {
