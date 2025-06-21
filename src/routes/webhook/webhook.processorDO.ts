@@ -1,11 +1,15 @@
 import { cleanPhoneNumber } from '../../utils/utils';
 import { DurableObject } from 'cloudflare:workers';
-import { 
-  WhatsAppWebhookPayload, 
+import {
+  WebhookPayload as WhatsAppWebhookPayload,
+  Message as WhatsAppMessage,
+  Contact as WhatsAppContact,
+  MessageValue,
   isWhatsAppWebhookPayload,
   isTextMessage,
   MessageProcessingResult
-} from '../../schemas/whatsapp.webhook.schema';
+} from './webhook.schema';
+import { CtaUrlInteractiveObject, CtaUrlMessagePayload } from '../../core/whatsApp.schema';
 import { WhatsAppClient } from '../../core/whatsapp';
 import { Env } from '../../bindings';
 
@@ -46,7 +50,14 @@ export class WebhookProcessor extends DurableObject {
             
           const entry = payload.entry?.[0];
           const change = entry?.changes?.[0];
-          const value = change?.value;
+          
+          // Check if this is a message change (not template status)
+          if (change?.field !== 'messages') {
+            console.log('⚠️ Non-message event received, skipping processing');
+            return { status: 'success', message: 'Non-message event processed' };
+          }
+          
+          const value = change.value as MessageValue;
           const message = value?.messages?.[0];
           const metadata = value?.metadata;
           const contact = value?.contacts?.[0];

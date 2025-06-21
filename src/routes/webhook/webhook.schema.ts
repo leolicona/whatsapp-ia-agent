@@ -1,12 +1,27 @@
 // Houses data validation schemas for WhatsApp webhook request bodies and parameters
 import { z } from 'zod'
 
+// ============================================================================
+// WEBHOOK VERIFICATION SCHEMAS
+// ============================================================================
+
 // Schema for WhatsApp webhook verification (GET request)
 export const webhookVerificationSchema = z.object({
   'hub.mode': z.string(),
   'hub.verify_token': z.string(),
   'hub.challenge': z.string().optional()
 })
+
+// Schema for webhook query parameters (verification)
+export const webhookQuerySchema = z.object({
+  'hub.mode': z.string().optional(),
+  'hub.verify_token': z.string().optional(),
+  'hub.challenge': z.string().optional()
+})
+
+// ============================================================================
+// MESSAGE CONTENT SCHEMAS
+// ============================================================================
 
 // Schema for text message content
 const textMessageSchema = z.object({
@@ -212,14 +227,10 @@ export const webhookPayloadSchema = z.object({
   entry: z.array(webhookEntrySchema)
 })
 
-// Schema for webhook query parameters (verification)
-export const webhookQuerySchema = z.object({
-  'hub.mode': z.string().optional(),
-  'hub.verify_token': z.string().optional(),
-  'hub.challenge': z.string().optional()
-})
+// ============================================================================
+// EXPORTED TYPES
+// ============================================================================
 
-// Export types for TypeScript
 export type WebhookVerification = z.infer<typeof webhookVerificationSchema>
 export type WebhookPayload = z.infer<typeof webhookPayloadSchema>
 export type WebhookQuery = z.infer<typeof webhookQuerySchema>
@@ -227,6 +238,47 @@ export type Message = z.infer<typeof messageSchema>
 export type MessageStatus = z.infer<typeof messageStatusSchema>
 export type Contact = z.infer<typeof contactSchema>
 export type TemplateStatus = z.infer<typeof templateStatusSchema>
+export type MessageValue = z.infer<typeof messageValueSchema>
+export type WebhookChange = z.infer<typeof webhookChangeSchema>
+export type WebhookEntry = z.infer<typeof webhookEntrySchema>
+
+// ============================================================================
+// TYPE GUARDS AND HELPERS
+// ============================================================================
+
+// Type guards for runtime type checking
+export const isWhatsAppWebhookPayload = (payload: any): payload is WebhookPayload => {
+  return (
+    payload &&
+    typeof payload === 'object' &&
+    payload.object === 'whatsapp_business_account' &&
+    Array.isArray(payload.entry)
+  );
+};
+
+export const isTextMessage = (message: Message): message is Message & { text: { body: string } } => {
+  return message.type === 'text' && !!message.text;
+};
+
+// Helper type for extracting messages from webhook payload
+export type ExtractedMessage = {
+  entryId: string;
+  phoneNumberId: string;
+  displayPhoneNumber: string;
+  message: Message;
+  contact?: Contact;
+};
+
+// Helper type for message processing
+export type MessageProcessingResult = {
+  status: 'success' | 'error';
+  message: string;
+  messageId?: string;
+};
+
+// ============================================================================
+// VALIDATION SCHEMAS COLLECTION
+// ============================================================================
 
 // Validation schemas for different webhook scenarios
 export const webhookSchemas = {

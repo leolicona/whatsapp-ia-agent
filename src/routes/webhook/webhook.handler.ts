@@ -3,8 +3,7 @@ import type { Context } from 'hono'
 import type { Env } from '../../bindings';
 import { WebhookProcessor } from './webhook.processorDO';
 import { HTTPException } from 'hono/http-exception'
-import type { WhatsAppWebhookPayload } from '../../schemas/whatsapp.webhook.schema'
-import { cleanPhoneNumber } from '../../utils/utils'
+import type { WebhookPayload as WhatsAppWebhookPayload, MessageValue } from './webhook.schema'
 
 export const webhookHandlers = {
   /**
@@ -16,10 +15,7 @@ export const webhookHandlers = {
       const mode = c.req.query('hub.mode')
       const token = c.req.query('hub.verify_token')
       const challenge = c.req.query('hub.challenge')
-      // Validate required parameters
-      if (!mode || !token) {
-        throw new HTTPException(400, { message: 'Missing required query parameters' })
-      }
+  
       // check the mode and token sent are correct
       if (mode === 'subscribe' && token === c.env.WHATSAPP_VERIFY_TOKEN) {
         // respond with 200 OK and challenge token from the request
@@ -45,7 +41,15 @@ export const webhookHandlers = {
   handleWebhookEvent: async (c: Context<{ Bindings: Env }>) => {
     try {
       const body = await c.req.json() as WhatsAppWebhookPayload
-      const messageID = body?.entry?.[0].changes?.[0].value?.messages?.[0].id 
+      const change = body?.entry?.[0].changes?.[0]
+      
+      // Check if this is a message change (not template status)
+      if (change?.field !== 'messages') {
+        return c.json({ success: true, message: 'Non-message event processed' })
+      }
+      
+      const messageValue = change.value as MessageValue
+      const messageID = messageValue?.messages?.[0].id 
       if (!messageID) return c.json({ 
         success: false, 
         message: 'Missing message ID'

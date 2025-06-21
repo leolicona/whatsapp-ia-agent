@@ -1,9 +1,13 @@
 import { makeApiRequester } from './makeApiRequester';
-import { CtaUrlInteractiveObject, CtaUrlMessagePayload, CtaUrlMessagePayloadSchema } from '../schemas/whatsapp.interactive.schema';
-type WhatsAppConfig = {
-  apiUrl: string;
-  token: string;
-};
+import { 
+  CtaUrlInteractiveObject, 
+  CtaUrlMessagePayload, 
+  CtaUrlMessagePayloadSchema,
+  TextMessagePayloadSchema,
+  TypingIndicatorPayloadSchema,
+  MarkAsReadPayloadSchema,
+  WhatsAppConfig
+} from './whatsApp.schema';
 const WhatsAppClient = (config: WhatsAppConfig) => {
  
    const apiRequest  = makeApiRequester(config);
