@@ -6,8 +6,9 @@ import {
   isTextMessage,
   MessageProcessingResult
 } from '../../schemas/whatsapp.webhook.schema';
-import { CtaUrlInteractiveObject, CtaUrlMessagePayload, CtaUrlMessagePayloadSchema } from '../../schemas/whatsapp.interactive.schema';
+import { WhatsAppClient } from '../../core/whatsapp';
 import { Env } from '../../bindings';
+
 
 
 export class WebhookProcessor extends DurableObject {
@@ -31,14 +32,17 @@ export class WebhookProcessor extends DurableObject {
   }
 
   private async processMessage(payload: WhatsAppWebhookPayload): Promise<MessageProcessingResult> {
-      console.log('🔄 [DO] Iniciando procesamiento del webhook payload');
-     console.log("Ctx:", this.ctx)
-     console.log("Env:", this.env)
+
       try {
           // Validate payload structure
           if (!isWhatsAppWebhookPayload(payload)) {
               throw new Error('Invalid WhatsApp webhook payload structure');
           }
+
+          const whatsAppClient = WhatsAppClient({
+            apiUrl: this.apiUrl,
+            token: this.env.WHATSAPP_API_TOKEN,
+          })
             
           const entry = payload.entry?.[0];
           const change = entry?.changes?.[0];
@@ -62,11 +66,11 @@ export class WebhookProcessor extends DurableObject {
           if (message && contact && isTextMessage(message)) {
               console.log('📱 Processing text message from:', contact.wa_id);
             
-              await this.markMessageAsRead(message.id)
-              await this.sendTypingIndicator(message.id);
+              await whatsAppClient.markMessageAsRead(message.id);
+              await whatsAppClient.sendTypingIndicator(message.id);
               
               if (message.text.body.toLowerCase() === 'cta') {
-                await this.sendCtaUrlMessage(cleanPhoneNumber(contact.wa_id), {
+                await whatsAppClient.sendCtaUrlMessage(cleanPhoneNumber(contact.wa_id), {
                   type: 'cta_url',
                   header: {
                     type: 'image',
@@ -89,7 +93,7 @@ export class WebhookProcessor extends DurableObject {
                   }
                 });
               } else {
-                await this.sendMessage(
+                await whatsAppClient.sendMessage(
                     cleanPhoneNumber(contact.wa_id),
                     {
                         type: "text",
@@ -130,71 +134,6 @@ export class WebhookProcessor extends DurableObject {
 
           return { status: 'error', message: errorMessage };
       }
-  }
-
-  async whatsAppApiRequest(body: object, method: string = 'POST'): Promise<Response> {
-    const response = await fetch(this.apiUrl, {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.env.WHATSAPP_API_TOKEN}`,
-        },
-        body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ [DO] WhatsApp API error:`, errorText);
-        throw new Error(`WhatsApp API error: ${response.status} ${response.statusText}`);
-    }
-
-    return response;
-  }
-
-  async sendMessage(to: string, message: object): Promise<void> {
-      const body = {
-          messaging_product: "whatsapp",
-          recipient_type: "individual",
-          to,
-          ...message,
-      };
-      await this.whatsAppApiRequest(body);
-  }
-
-  async sendCtaUrlMessage(to: string, interactive: CtaUrlInteractiveObject): Promise<void> {
-    const body: CtaUrlMessagePayload = {
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to,
-        type: "interactive",
-        interactive,
-    };
-
-    // Validate the payload before sending
-    CtaUrlMessagePayloadSchema.parse(body);
-
-    await this.whatsAppApiRequest(body);
-  }
-
-  async sendTypingIndicator(messageId: string): Promise<void> {
-    const body = {
-        messaging_product: "whatsapp",
-        status: "read",
-        message_id: messageId,
-        typing_indicator: {
-          type: "text"
-        }
-    };
-    await this.whatsAppApiRequest(body);
-  }
-
-  async markMessageAsRead(messageId: string): Promise<void> {
-    const body = {
-        messaging_product: "whatsapp",
-        status: "read",
-        message_id: messageId,
-    };
-    await this.whatsAppApiRequest(body);
   }
 }
 

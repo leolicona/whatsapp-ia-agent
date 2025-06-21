@@ -1,9 +1,7 @@
 // This file defines the Hono router for WhatsApp webhook endpoints
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { zodValidator } from '../../middleware/zod.validator'
 import { webhookHandlers } from './webhook.handler'
-import { webhookSchemas } from './webhook.schema'
 import type { Env } from '../../bindings'
 
 const webhook = new Hono<{ Bindings: Env }>
