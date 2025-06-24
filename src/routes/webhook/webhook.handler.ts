@@ -1,7 +1,7 @@
 // Houses business logic for handling WhatsApp webhook requests
 import type { Context } from 'hono'
 import type { Env } from '../../bindings';
-import { WebhookProcessor } from './webhook.processorDO';
+import { WebhookProcessor } from './webhook.processor';
 import { HTTPException } from 'hono/http-exception'
 import type { WebhookPayload as WhatsAppWebhookPayload, MessageValue } from './webhook.schema'
 
