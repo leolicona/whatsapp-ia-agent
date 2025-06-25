@@ -1,4 +1,3 @@
-import { makeApiRequester } from './makeApiRequester';
 import { 
   CtaUrlInteractiveObject, 
   CtaUrlMessagePayload, 
@@ -8,6 +7,8 @@ import {
   MarkAsReadPayloadSchema,
   WhatsAppConfig
 } from './whatsApp.schema';
+import { makeApiRequester } from '../makeApiRequester';
+
 const WhatsAppClient = (config: WhatsAppConfig) => {
  
    const apiRequest  = makeApiRequester(config);

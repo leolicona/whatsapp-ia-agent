@@ -24,7 +24,7 @@ app.use('*', corsMiddleware)
 //app.use('*', rateLimitPresets.moderate)
 
 // Mount webhook routes
-app.route('/api/webhook', webhook)
+app.route('/webhook', webhook)
 
 // Basic routes
 app.get('/', (c) => {

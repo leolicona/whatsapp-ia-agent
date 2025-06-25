@@ -1,5 +1,5 @@
 {
-  "name": "OTPless-auth-service",
+  "name": "whatsapp-ia-agent",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
@@ -8,6 +8,8 @@
     "test:run": "vitest run"
   },
   "dependencies": {
+    "@google/genai": "^0.14.1",
+    "@google/generative-ai": "^0.24.1",
     "@hono-rate-limiter/cloudflare": "^0.2.2",
     "@hono/zod-validator": "^0.7.0",
     "hono": "^4.7.11",

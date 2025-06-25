@@ -2,6 +2,10 @@
 // This file defines TypeScript types for environment variables and Cloudflare services
 
 export interface Env {
+
+  //IA 
+  GEMINI_API_KEY: string;
+
   // Environment variables
   JWT_SECRET: string;
   OTPLESS_CLIENT_ID: string;
