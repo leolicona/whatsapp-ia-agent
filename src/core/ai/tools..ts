@@ -1,9 +1,6 @@
 import { FunctionDeclaration, SchemaType, Schema } from '@google/generative-ai';
 
-interface LightValues {
-  brightness: number;
-  color_temp: string;
-}
+import type { LightValues, ThermostatSettings, MusicControl } from './ai.types';
 
 // Function implementations for smart home devices
 export const setLightValues = (brightness: number, color_temp: string): LightValues => {

@@ -9,15 +9,12 @@ import {
   MessageProcessingResult
 } from './webhook.schema';
 import { CtaUrlInteractiveObject, CtaUrlMessagePayload } from '../../core/whatsapp/whatsApp.schema';
-import { WhatsAppClient } from '../../core/whatsapp/whatsapp';
+import { WhatsAppClient, WhatsAppApiClient } from '../../core/whatsapp/whatsapp';
 import { Env } from '../../bindings';
-import { 
-  processWithFunctionCalling,
-  createFunctionCallingContext,
-  FunctionCallingContext 
-} from '../../core/ia/functionCalling';
+import { functionCallingService } from '../../core/ai/fnCalling.service';
+import type { FunctionCallingContext } from '../../core/ai/ai.types';
 import { cleanPhoneNumber } from '../../utils/utils';
-import { setLightValues, allFunctionSchemas } from '../../core/ia/tools.schemas';
+import { allFunctionSchemas } from '../../core/ai/tools.';
 
 
 
@@ -26,13 +23,18 @@ export class WebhookProcessor extends DurableObject {
   private readonly apiUrl: string;
   public readonly env: Env;
   private functionCallingContext: FunctionCallingContext;
+  private readonly whatsAppClient: WhatsAppApiClient;
 
   constructor(ctx: DurableObjectState, env: Env) {
       super(ctx, env);
       this.env = env;
       console.log('🟣 [DoWaProcessMessages] Inicializando Durable Object');
       this.apiUrl = `https://graph.facebook.com/${env.WHATSAPP_API_VERSION}/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
-      this.functionCallingContext = createFunctionCallingContext();
+      this.whatsAppClient = WhatsAppClient({
+        apiUrl: this.apiUrl,
+        token: this.env.WHATSAPP_API_TOKEN,
+      });
+      this.functionCallingContext = functionCallingService.createContext();
   }
 
   async processWebhook(payload: WhatsAppWebhookPayload): Promise<MessageProcessingResult> {
@@ -54,12 +56,6 @@ export class WebhookProcessor extends DurableObject {
         const entry = payload.entry?.[0];
         const change = entry?.changes?.[0];
         
-
-        const whatsAppClient = WhatsAppClient({
-          apiUrl: this.apiUrl,
-          token: this.env.WHATSAPP_API_TOKEN,
-        })
-          
         
         if (change?.field !== 'messages') {
           console.warn('⚠️ [WebhookProcessorDO] Non-message event received, skipping processing.');
@@ -89,15 +85,15 @@ export class WebhookProcessor extends DurableObject {
         if (isTextMessage(message)) {
             console.log(`💬 [WebhookProcessorDO] Processing text message. Body: "${message.text.body}"`);
           
-            await whatsAppClient.markMessageAsRead(message.id);
-            await whatsAppClient.sendTypingIndicator(message.id);
+            await this.whatsAppClient.markMessageAsRead(message.id);
+            await this.whatsAppClient.sendTypingIndicator(message.id);
 
             const phoneNumber = cleanPhoneNumber(contact.wa_id);
             console.log(`🔍 [WebhookProcessorDO] Searching for user with phone number: ${phoneNumber}`);
             
 
               // Process with AI using enhanced function calling
-              const result = await processWithFunctionCalling(
+              const result = await functionCallingService.functionCalling(
                 message.text.body,
                 `You are a helpful smart home assistant that can control multiple devices simultaneously. 
                 Available functions:
@@ -133,7 +129,7 @@ export class WebhookProcessor extends DurableObject {
 
               console.log(`🤖 [WebhookProcessorDO] AI Response: ${responseText}`);
             
-              await whatsAppClient.sendMessage(
+              await this.whatsAppClient.sendMessage(
                    phoneNumber,
                    {
                        type: "text",
@@ -176,7 +172,3 @@ export class WebhookProcessor extends DurableObject {
     }
   }
 }
-
-
-
-

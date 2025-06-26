@@ -6,27 +6,11 @@ import {
 } from '@google/generative-ai';
 
 import type { Schema } from '@google/generative-ai';
-
-interface GeminiArgs {
-  apiKey: string;
-  input: string; // Simple string input that will be converted to Content[]
-  model?: string;
-  systemPrompt: string;
-  responseSchema?: Schema;
-  tools?: FunctionDeclaration[];
-  conversationHistory?: Content[]; // Support for conversation history
-}
-
-interface FunctionCallResponse {
-  name: string;
-  args: Record<string, any>;
-}
-
-interface GeminiResponse {
-  text: string | null;
-  functionCall: FunctionCallResponse | null;
-  functionCalls: FunctionCallResponse[] | null; // Support for parallel function calling
-}
+import type {
+  GeminiArgs,
+  FunctionCallResponse,
+  GeminiResponse
+} from './ai.types';
 
 export const gemini = async ({
   input,
