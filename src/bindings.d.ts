@@ -35,6 +35,9 @@ export interface Env {
   
   // Durable Object for webhook processing
   WEBHOOK_PROCESSOR: DurableObjectNamespace;
+  
+  // Vectorize index for embeddings
+  VECTORIZE: VectorizeIndex;
 }
 
 // Extend the Hono Context type to include our environment

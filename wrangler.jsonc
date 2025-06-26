@@ -37,6 +37,12 @@
       "new_sqlite_classes": ["WebhookProcessor"]
     }
   ],
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "whatsapp-ai-agent-embeddings"
+    }
+  ],
   // R2 bucket for asset storage (optional)
   // "r2_buckets": [
   //   {
