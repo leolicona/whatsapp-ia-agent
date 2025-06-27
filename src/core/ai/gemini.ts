@@ -1,20 +1,17 @@
 
 import {
-  GoogleGenerativeAI,
-  FunctionDeclaration,
+  GoogleGenAI,
   Content,
-} from '@google/generative-ai';
-
-import type { Schema } from '@google/generative-ai';
+  FunctionCallingConfigMode,
+} from '@google/genai';
 import type {
   GeminiArgs,
-  FunctionCallResponse,
   GeminiResponse
 } from './ai.types';
 
 export const gemini = async ({
   input,
-  model = 'gemini-2.5-flash-lite-preview-06-17',
+  model = 'gemini-2.0-flash-001',
   systemPrompt,
   responseSchema,
   apiKey,
@@ -29,34 +26,46 @@ export const gemini = async ({
         parts: [{ text: input }]
       }];
 
-  const genAI = new GoogleGenerativeAI(apiKey);
+  const ai = new GoogleGenAI({ apiKey });
 
-  const generationConfig = responseSchema
-    ? {
-        responseMimeType: 'application/json' as const,
-        responseSchema: responseSchema,
-      }
-    : undefined;
-
-  const generativeModel = genAI.getGenerativeModel({
-    model,
-    generationConfig,
+  // Build the config object for the new SDK
+  const config: any = {
     systemInstruction: systemPrompt,
-    tools: tools ? [{ functionDeclarations: tools }] : undefined,
-  });
+  };
+
+  // Add generation config for JSON responses
+  if (responseSchema) {
+    config.generationConfig = {
+      responseMimeType: 'application/json',
+      responseSchema: responseSchema,
+    };
+  }
+
+  // Add tools configuration
+  if (tools && tools.length > 0) {
+    config.tools = [{ functionDeclarations: tools }];
+    config.toolConfig = {
+      functionCallingConfig: {
+        mode: FunctionCallingConfigMode.AUTO,
+      },
+    };
+  }
 
   try {
-    const result = await generativeModel.generateContent({ contents });
+    const response = await ai.models.generateContent({
+      model,
+      contents,
+      config,
+    });
 
-    const response = result.response;
     const parts = response.candidates?.[0]?.content?.parts || [];
     
     // Check for function calls in all parts
     const functionCalls = parts
       .filter(part => 'functionCall' in part && part.functionCall)
       .map(part => ({
-        name: part.functionCall!.name,
-        args: part.functionCall!.args,
+        name: part.functionCall!.name || '',
+        args: part.functionCall!.args || {},
       }));
     
     if (functionCalls.length > 0) {
@@ -68,7 +77,7 @@ export const gemini = async ({
     }
 
     return {
-      text: response.text(),
+      text: response.text || null,
       functionCall: null,
       functionCalls: null,
     };

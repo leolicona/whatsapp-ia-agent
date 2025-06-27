@@ -1,8 +1,8 @@
-import {
+import type {
   FunctionDeclaration,
   Content,
-} from '@google/generative-ai';
-import type { Schema } from '@google/generative-ai';
+  Schema,
+} from '@google/genai';
 
 // Gemini API related schemas
 export interface GeminiArgs {

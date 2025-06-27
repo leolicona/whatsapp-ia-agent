@@ -1,5 +1,4 @@
-import { FunctionDeclaration, SchemaType, Schema } from '@google/generative-ai';
-
+import { FunctionDeclaration, Type } from '@google/genai';
 import type { LightValues, ThermostatSettings, MusicControl } from './ai.types';
 
 // Function implementations for smart home devices
@@ -37,63 +36,63 @@ export const setLightValuesSchema = {
   name: 'set_light_values',
   description: 'Sets the brightness and color temperature of a light.',
   parameters: {
-    type: SchemaType.OBJECT,
+    type: Type.OBJECT,
     properties: {
       brightness: {
-        type: SchemaType.NUMBER,
+        type: Type.NUMBER,
         description: 'Light level from 0 to 100. Zero is off and 100 is full brightness',
-      } as Schema,
+      },
       color_temp: {
-        type: SchemaType.STRING,
+        type: Type.STRING,
         enum: ['daylight', 'cool', 'warm'],
         description: 'Color temperature of the light fixture, which can be `daylight`, `cool` or `warm`.',
-      } as Schema,
+      },
     },
     required: ['brightness', 'color_temp'],
-  } as Schema,
-} as FunctionDeclaration;
+  },
+};
 
 // Thermostat control schema
 export const setThermostatSchema = {
   name: 'set_thermostat',
   description: 'Control the smart thermostat temperature and mode',
   parameters: {
-    type: SchemaType.OBJECT,
+    type: Type.OBJECT,
     properties: {
       temperature: {
-        type: SchemaType.NUMBER,
+        type: Type.NUMBER,
         description: 'Target temperature in Celsius (16-30)',
-      } as Schema,
+      },
       mode: {
-        type: SchemaType.STRING,
+        type: Type.STRING,
         description: 'Thermostat mode: heat, cool, auto, or off',
         enum: ['heat', 'cool', 'auto', 'off'],
-      } as Schema,
+      },
     },
     required: ['temperature', 'mode'],
-  } as Schema,
-} as FunctionDeclaration;
+  },
+};
 
 // Music control schema
 export const controlMusicSchema = {
   name: 'control_music',
   description: 'Control music playback and volume',
   parameters: {
-    type: SchemaType.OBJECT,
+    type: Type.OBJECT,
     properties: {
       action: {
-        type: SchemaType.STRING,
+        type: Type.STRING,
         description: 'Music action: play, pause, stop, next, previous',
         enum: ['play', 'pause', 'stop', 'next', 'previous'],
-      } as Schema,
+      },
       volume: {
-        type: SchemaType.NUMBER,
+        type: Type.NUMBER,
         description: 'Volume level (0-100), optional',
-      } as Schema,
+      },
     },
     required: ['action'],
-  } as Schema,
-} as FunctionDeclaration;
+  },
+};
 
 // Export all schemas as an array for easy use
 export const allFunctionSchemas = [

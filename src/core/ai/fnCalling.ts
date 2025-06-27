@@ -1,4 +1,4 @@
-import { FunctionDeclaration, Content } from '@google/generative-ai';
+import { FunctionDeclaration, Content } from '@google/genai';
 import type {
   FunctionExecutionResult,
   FunctionCallingResult,
