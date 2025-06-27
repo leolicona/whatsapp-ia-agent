@@ -9,7 +9,7 @@ import {
   MessageProcessingResult
 } from './webhook.schema';
 import { CtaUrlInteractiveObject, CtaUrlMessagePayload } from '../../core/whatsapp/whatsApp.schema';
-import { WhatsAppClient, WhatsAppApiClient } from '../../core/whatsapp/whatsapp';
+import { WhatsAppClient } from '../../core/whatsapp/whatsapp';
 import { Env } from '../../bindings';
 import { functionCallingService } from '../../core/ai/fnCalling.service';
 import type { FunctionCallingContext } from '../../core/ai/ai.types';
@@ -23,7 +23,7 @@ export class WebhookProcessor extends DurableObject {
   private readonly apiUrl: string;
   public readonly env: Env;
   private functionCallingContext: FunctionCallingContext;
-  private readonly whatsAppClient: WhatsAppApiClient;
+  private readonly whatsAppClient: ReturnType<typeof WhatsAppClient>;
 
   constructor(ctx: DurableObjectState, env: Env) {
       super(ctx, env);
