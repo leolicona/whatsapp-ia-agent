@@ -127,6 +127,7 @@ export const createFunctionCalling = (
   ): Promise<FunctionCallingResult> => {
     const addMessage = addToHistory(context);
     const processFunctions = processFunctionCalls(executeAll, addMessage);
+    const getFinalResponse = createFinalResponse(gemini, addMessage);
     const allExecutedFns: FunctionExecutionResult[] = [];
     const MAX_TURNS = 5;
     let turnCount = 0;
@@ -163,17 +164,32 @@ export const createFunctionCalling = (
         }
 
         // If we get here, the AI didn't return text or a function call
+        // Use createFinalResponse to generate a final response
+        const finalResponse = await getFinalResponse(
+          systemPrompt,
+          tools,
+          apiKey,
+          context.conversationHistory
+        );
+        
         return buildResult(
-          'No response generated',
+          finalResponse,
           context.conversationHistory,
           allExecutedFns,
           false
         );
       }
 
-      // Handle loop exit due to MAX_TURNS
+      // Handle loop exit due to MAX_TURNS - use createFinalResponse
+      const finalResponse = await getFinalResponse(
+        systemPrompt,
+        tools,
+        apiKey,
+        context.conversationHistory
+      );
+      
       return buildResult(
-        'Exceeded maximum function calling turns.',
+        finalResponse,
         context.conversationHistory,
         allExecutedFns,
         false
