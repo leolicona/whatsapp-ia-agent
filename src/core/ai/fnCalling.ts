@@ -3,60 +3,121 @@ import type {
   FunctionExecutionResult,
   FunctionCallingResult,
   FunctionCallingContext,
-  GeminiResponse,
   FunctionRegistry,
   GeminiFunction
 } from './ai.types';
+import type { Env } from '../../bindings';
+
+// Pure function utilities with environment context support
+const executeFunction = (registry: FunctionRegistry, env?: Env) => (name: string, args: any) => {
+  const fn = registry[name];
+  if (!fn) throw new Error(`Function '${name}' not found`);
+  
+  // Check if function accepts environment parameter
+  if (fn.length > Object.keys(args).length && env) {
+    // Pass environment as additional parameter
+    return fn(...Object.values(args), env);
+  }
+  
+  return fn(...Object.values(args));
+};
+
+const executeFunctions = (registry: FunctionRegistry, env?: Env) => async (calls: Array<{ name: string; args: any }>) => {
+  const executor = executeFunction(registry, env);
+  const results = await Promise.allSettled(
+    calls.map(async ({ name, args }) => ({
+      name,
+      args,
+      result: await executor(name, args)
+    }))
+  );
+  
+  return results.map((result, i) => 
+    result.status === 'fulfilled' 
+      ? result.value 
+      : { ...calls[i], result: null, error: String(result.reason) }
+  );
+};
+
+// Message creation utilities
+const createUserMessage = (text: string): Content => ({
+  role: 'user',
+  parts: [{ text }]
+});
+
+const createModelMessage = (text: string): Content => ({
+  role: 'model',
+  parts: [{ text }]
+});
+
+const createFunctionCallMessage = (calls: Array<{ name: string; args: any }>): Content => ({
+  role: 'model',
+  parts: calls.map(fc => ({ functionCall: { name: fc.name, args: fc.args } }))
+});
+
+const createFunctionResponseMessage = (results: FunctionExecutionResult[]): Content => ({
+  role: 'function',
+  parts: results.map(result => ({
+    functionResponse: {
+      name: result.name,
+      response: 'error' in result ? { error: result.error } : result.result
+    }
+  }))
+});
+
+// Context management utilities
+const addToHistory = (context: FunctionCallingContext) => (content: Content) => {
+  context.conversationHistory.push(content);
+};
+
+const createContext = (): FunctionCallingContext => ({ conversationHistory: [] });
+
+const resetConversation = (context: FunctionCallingContext) => {
+  context.conversationHistory = [];
+};
+
+const getConversationHistory = (context: FunctionCallingContext) => [...context.conversationHistory];
+
+// Core function calling pipeline
+const processFunctionCalls = (executeAll: ReturnType<typeof executeFunctions>, addMessage: ReturnType<typeof addToHistory>) => 
+  async (functionCalls: Array<{ name: string; args: any }>) => {
+    addMessage(createFunctionCallMessage(functionCalls));
+    const results = await executeAll(functionCalls);
+    addMessage(createFunctionResponseMessage(results));
+    return results;
+  };
+
+const createFinalResponse = (gemini: GeminiFunction, addMessage: ReturnType<typeof addToHistory>) => 
+  async (systemPrompt: string, tools: FunctionDeclaration[], apiKey: string, conversationHistory: Content[]) => {
+    const response = await gemini({
+      input: '',
+      systemPrompt,
+      tools,
+      apiKey,
+      conversationHistory
+    });
+    
+    if (response.text) {
+      addMessage(createModelMessage(response.text));
+    }
+    
+    return response.text || 'Functions executed successfully';
+  };
+
+const buildResult = (finalResponse: string, conversationHistory: Content[], functionsExecuted: FunctionExecutionResult[], isParallel: boolean): FunctionCallingResult => ({
+  finalResponse,
+  conversationHistory,
+  functionsExecuted,
+  isParallelExecution: isParallel
+});
 
 export const createFunctionCalling = (
   functionRegistry: FunctionRegistry,
-  gemini: GeminiFunction
+  gemini: GeminiFunction,
+  env?: Env
 ) => {
-  const executeFunction = (name: string, args: any) => {
-    const fn = functionRegistry[name];
-    if (!fn) throw new Error(`Function '${name}' not found`);
-    
-    // Map function names to their parameter extraction logic
-    switch (name) {
-      case 'set_light_values':
-        return fn(args.brightness, args.color_temp);
-      case 'set_thermostat':
-        return fn(args.temperature, args.mode);
-      case 'control_music':
-        return fn(args.action, args.volume);
-      default:
-        // Fallback for any other functions - pass args as single parameter
-        return fn(args);
-    }
-  };
-
-  const executeFunctionsParallel = async (calls: Array<{ name: string; args: any }>) =>
-    Promise.allSettled(
-      calls.map(async ({ name, args }) => ({
-        name,
-        args,
-        result: await executeFunction(name, args),
-      }))
-    ).then(results =>
-      results.map((result, i) =>
-        result.status === 'fulfilled'
-          ? result.value
-          : { ...calls[i], result: null, error: String(result.reason) }
-      )
-    );
-
-  const createContext = (): FunctionCallingContext => ({
-    conversationHistory: []
-  });
-
-  const resetConversation = (context: FunctionCallingContext): void => {
-    context.conversationHistory = [];
-  };
-
-  const getConversationHistory = (context: FunctionCallingContext): Content[] => {
-    return [...context.conversationHistory];
-  };
-
+  const executeAll = executeFunctions(functionRegistry, env);
+  
   const functionCalling = async (
     userInput: string,
     systemPrompt: string,
@@ -64,115 +125,57 @@ export const createFunctionCalling = (
     apiKey: string,
     context: FunctionCallingContext
   ): Promise<FunctionCallingResult> => {
-    const functionsExecuted: FunctionExecutionResult[] = [];
+    const addMessage = addToHistory(context);
+    const processFunctions = processFunctionCalls(executeAll, addMessage);
+    const getFinalResponse = createFinalResponse(gemini, addMessage);
     
-    let response = await gemini({
-      input: userInput,
-      systemPrompt,
-      tools,
-      apiKey,
-      conversationHistory: context.conversationHistory
-    });
-    
-    context.conversationHistory.push({
-      role: 'user',
-      parts: [{ text: userInput }]
-    });
-    
-    if (response.functionCalls && response.functionCalls.length > 0) {
-      const isParallelExecution = response.functionCalls.length > 1;
-      
-      console.log(`🔧 [FunctionCalling] ${isParallelExecution ? 'Parallel' : 'Single'} function execution detected`);
-      console.log(`📋 [FunctionCalling] Functions to execute:`, response.functionCalls.map(fc => fc.name));
-      
-      context.conversationHistory.push({
-        role: 'model',
-        parts: response.functionCalls.map(fc => ({
-          functionCall: {
-            name: fc.name,
-            args: fc.args
-          }
-        }))
+    try {
+      // Get initial AI response
+      const response = await gemini({
+        input: userInput,
+        systemPrompt,
+        tools,
+        apiKey,
+        conversationHistory: context.conversationHistory
       });
       
-      try {
-        const executionResults = await executeFunctionsParallel(response.functionCalls);
-        functionsExecuted.push(...executionResults);
+      addMessage(createUserMessage(userInput));
+      
+      // Handle function calls if present
+      if (response.functionCalls?.length) {
+        const functionsExecuted = await processFunctions(response.functionCalls);
+        const finalResponse = await getFinalResponse(systemPrompt, tools, apiKey, context.conversationHistory);
         
-        if (isParallelExecution) {
-          console.log(`⚡ [FunctionCalling] Parallel execution completed:`);
-          for (const result of executionResults) {
-            const args = Object.entries(result.args)
-              .map(([key, val]) => `${key}=${val}`)
-              .join(', ');
-            console.log(`  - ${result.name}(${args}) -> ${'error' in result ? `Error: ${result.error}` : 'Success'}`);
-          }
-        } else {
-          const result = executionResults[0];
-          const args = Object.entries(result.args)
-            .map(([key, val]) => `${key}=${val}`)
-            .join(', ');
-          console.log(`🔧 [FunctionCalling] Function executed: ${result.name}(${args})`);
-        }
-        
-        context.conversationHistory.push({
-          role: 'function',
-          parts: executionResults.map(result => ({
-            functionResponse: {
-              name: result.name,
-              response: 'error' in result ? { error: result.error } : result.result
-            }
-          }))
-        });
-        
-        const finalResponse = await gemini({
-          input: '',
-          systemPrompt,
-          tools,
-          apiKey,
-          conversationHistory: context.conversationHistory
-        });
-        
-        if (finalResponse.text) {
-          context.conversationHistory.push({
-            role: 'model',
-            parts: [{ text: finalResponse.text }]
-          });
-        }
-        
-        return {
-          finalResponse: finalResponse.text || 'Functions executed successfully',
-          conversationHistory: context.conversationHistory,
+        return buildResult(
+          finalResponse,
+          context.conversationHistory,
           functionsExecuted,
-          isParallelExecution
-        };
-        
-      } catch (error) {
-        console.error('❌ [FunctionCalling] Function execution error:', error);
-        return {
-          finalResponse: `Error executing functions: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          conversationHistory: context.conversationHistory,
-          functionsExecuted,
-          isParallelExecution: response.functionCalls.length > 1
-        };
+          response.functionCalls.length > 1
+        );
       }
+      
+      // No function calls - direct response
+      if (response.text) {
+        addMessage(createModelMessage(response.text));
+      }
+      
+      return buildResult(
+        response.text || 'No response generated',
+        context.conversationHistory,
+        [],
+        false
+      );
+      
+    } catch (error) {
+      return buildResult(
+        `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        context.conversationHistory,
+        [],
+        false
+      );
     }
-    
-    if (response.text) {
-      context.conversationHistory.push({
-        role: 'model',
-        parts: [{ text: response.text }]
-      });
-    }
-    
-    return {
-      finalResponse: response.text || 'No response generated',
-      conversationHistory: context.conversationHistory,
-      functionsExecuted,
-      isParallelExecution: false
-    };
   };
-
+  
   return {
     createContext,
     resetConversation,

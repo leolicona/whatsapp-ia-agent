@@ -1,11 +1,16 @@
 import { FunctionDeclaration, Type } from '@google/genai';
 import type { LightValues, ThermostatSettings, MusicControl } from './ai.types';
+import type { Env } from '../../bindings';
 
 // Function implementations for smart home devices
-export const setLightValues = (brightness: number, color_temp: string): LightValues => {
+export const setLightValues = (brightness: number, color_temp: string, env?: Env): LightValues => {
   console.log(`🔆 [setLightValues] Setting brightness to ${brightness}% and color temperature to ${color_temp}`);
-  
+  console.log("env", env);
   // Here you would implement the actual logic to control the lights
+  // Access to Cloudflare services via env parameter if needed:
+  // - env.KV for storing device states
+  // - env.D1 for device configuration
+  // - env.R2 for device logs
   // For now, we'll just return the values as confirmation
   return {
     brightness,
@@ -13,8 +18,12 @@ export const setLightValues = (brightness: number, color_temp: string): LightVal
   };
 };
 
-export const setThermostat = (temperature: number, mode: string) => {
+export const setThermostat = (temperature: number, mode: string, env?: Env) => {
   console.log(`🌡️ [setThermostat] Setting temperature to ${temperature}°C in ${mode} mode`);
+  
+  // Access to Cloudflare services via env parameter if needed:
+  // - env.ANALYTICS_ENGINE for tracking temperature changes
+  // - env.KV for storing thermostat schedules
   return {
     temperature,
     mode,
@@ -22,8 +31,12 @@ export const setThermostat = (temperature: number, mode: string) => {
   };
 };
 
-export const controlMusic = (action: string, volume?: number) => {
+export const controlMusic = (action: string, volume?: number, env?: Env) => {
   console.log(`🎵 [controlMusic] ${action} music${volume ? ` at volume ${volume}%` : ''}`);
+  
+  // Access to Cloudflare services via env parameter if needed:
+  // - env.QUEUE for queuing music commands
+  // - env.KV for storing playlists
   return {
     action,
     volume: volume || 50,

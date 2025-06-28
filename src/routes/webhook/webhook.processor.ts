@@ -11,10 +11,12 @@ import {
 import { CtaUrlInteractiveObject, CtaUrlMessagePayload } from '../../core/whatsapp/whatsApp.schema';
 import { WhatsAppClient } from '../../core/whatsapp/whatsapp';
 import { Env } from '../../bindings';
-import { functionCallingService } from '../../core/ai/fnCalling.service';
+import { createFunctionCalling } from '../../core/ai/fnCalling';
+import { functionRegistry } from '../../core/ai/fnCalling.registry';
+import { gemini } from '../../core/ai/gemini';
 import type { FunctionCallingContext } from '../../core/ai/ai.types';
 import { cleanPhoneNumber } from '../../utils/utils';
-import { allFunctionSchemas } from '../../core/ai/tools.';
+import { allFunctionSchemas } from '../../core/ai/tools';
 
 
 
@@ -24,6 +26,7 @@ export class WebhookProcessor extends DurableObject {
   public readonly env: Env;
   private functionCallingContext: FunctionCallingContext;
   private readonly whatsAppClient: ReturnType<typeof WhatsAppClient>;
+  private readonly functionCallingService: ReturnType<typeof createFunctionCalling>;
 
   constructor(ctx: DurableObjectState, env: Env) {
       super(ctx, env);
@@ -34,7 +37,10 @@ export class WebhookProcessor extends DurableObject {
         apiUrl: this.apiUrl,
         token: this.env.WHATSAPP_API_TOKEN,
       });
-      this.functionCallingContext = functionCallingService.createContext();
+      
+      // Create function calling service with environment context
+       this.functionCallingService = createFunctionCalling(functionRegistry, gemini, this.env);
+       this.functionCallingContext = this.functionCallingService.createContext();
   }
 
   async processWebhook(payload: WhatsAppWebhookPayload): Promise<MessageProcessingResult> {
@@ -93,7 +99,7 @@ export class WebhookProcessor extends DurableObject {
             
 
               // Process with AI using enhanced function calling
-              const result = await functionCallingService.functionCalling(
+              const result = await this.functionCallingService.functionCalling(
                 message.text.body,
                 `You are a helpful smart home assistant that can control multiple devices simultaneously. 
                 Available functions:

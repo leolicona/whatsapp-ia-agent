@@ -1,4 +1,4 @@
-import { setLightValues, setThermostat, controlMusic } from './tools.';
+import { setLightValues, setThermostat, controlMusic } from './tools';
 
 export const functionRegistry = {
   set_light_values: setLightValues,
