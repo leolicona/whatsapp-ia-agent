@@ -127,50 +127,62 @@ export const createFunctionCalling = (
   ): Promise<FunctionCallingResult> => {
     const addMessage = addToHistory(context);
     const processFunctions = processFunctionCalls(executeAll, addMessage);
-    const getFinalResponse = createFinalResponse(gemini, addMessage);
-    
+    const allExecutedFns: FunctionExecutionResult[] = [];
+    const MAX_TURNS = 5;
+    let turnCount = 0;
+
+    addMessage(createUserMessage(userInput));
+
     try {
-      // Get initial AI response
-      const response = await gemini({
-        input: userInput,
-        systemPrompt,
-        tools,
-        apiKey,
-        conversationHistory: context.conversationHistory
-      });
-      
-      addMessage(createUserMessage(userInput));
-      
-      // Handle function calls if present
-      if (response.functionCalls?.length) {
-        const functionsExecuted = await processFunctions(response.functionCalls);
-        const finalResponse = await getFinalResponse(systemPrompt, tools, apiKey, context.conversationHistory);
-        
+      while (turnCount < MAX_TURNS) {
+        turnCount++;
+
+        const response = await gemini({
+          input: '', // Input is now managed via history
+          systemPrompt,
+          tools,
+          apiKey,
+          conversationHistory: context.conversationHistory,
+        });
+
+        if (response.functionCalls?.length) {
+          const executedFns = await processFunctions(response.functionCalls);
+          allExecutedFns.push(...executedFns);
+          // Continue to the next iteration to see what the AI does next
+          continue;
+        }
+
+        if (response.text) {
+          addMessage(createModelMessage(response.text));
+          return buildResult(
+            response.text,
+            context.conversationHistory,
+            allExecutedFns,
+            allExecutedFns.length > 1
+          );
+        }
+
+        // If we get here, the AI didn't return text or a function call
         return buildResult(
-          finalResponse,
+          'No response generated',
           context.conversationHistory,
-          functionsExecuted,
-          response.functionCalls.length > 1
+          allExecutedFns,
+          false
         );
       }
-      
-      // No function calls - direct response
-      if (response.text) {
-        addMessage(createModelMessage(response.text));
-      }
-      
+
+      // Handle loop exit due to MAX_TURNS
       return buildResult(
-        response.text || 'No response generated',
+        'Exceeded maximum function calling turns.',
         context.conversationHistory,
-        [],
+        allExecutedFns,
         false
       );
-      
     } catch (error) {
       return buildResult(
         `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         context.conversationHistory,
-        [],
+        allExecutedFns,
         false
       );
     }
