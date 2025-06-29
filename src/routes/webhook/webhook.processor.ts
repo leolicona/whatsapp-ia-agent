@@ -17,9 +17,9 @@ import { gemini } from '../../core/ai/gemini';
 import type { FunctionCallingContext } from '../../core/ai/ai.types';
 import { cleanPhoneNumber } from '../../utils/utils';
 import { allFunctionSchemas } from '../../core/ai/tools';
-
-
-
+import { createDatabase } from '../../core/database/connection';
+import { getContext} from '../../core/database/registration.service';
+import { saveMessage } from '../../core/database/message.service';
 
 export class WebhookProcessor extends DurableObject {
   private readonly apiUrl: string;
@@ -95,28 +95,52 @@ export class WebhookProcessor extends DurableObject {
             await this.whatsAppClient.sendTypingIndicator(message.id);
 
             const phoneNumber = cleanPhoneNumber(contact.wa_id);
-            console.log(`🔍 [WebhookProcessorDO] Searching for user with phone number: ${phoneNumber}`);
+            console.log(`🔍 [WebhookProcessorDO] Processing customer registration for phone: ${phoneNumber}`);
             
-
+            // Create database connection
+            const db = createDatabase(this.env);
+        
+            // Process user registration
+            const context = await getContext(
+              db,
+              phoneNumber,
+              value?.metadata?.phone_number_id,
+              contact.profile?.name
+            );
+            
+            console.log(`${context.isNewUser ? '🆕' : '👤'} [WebhookProcessorDO] User ${context.isNewUser ? 'registered' : 'found'}: ${context.user.id}`);
+            console.log(`🏢 [WebhookProcessorDO] Business: ${context.business}`);
+            
+            if (context.messageHistory.length > 0) {
+              console.log(`📚 [WebhookProcessorDO] Found ${context.messageHistory.length} previous messages`); 
+            }
+            
+            // Save incoming user message
+            await saveMessage(
+              db,
+              message.id, // Use WhatsApp message ID as wamId
+              context.user.id,
+              context.business.id,
+              'user',
+              [{ text: message.text.body}]
+            );
+            
+            console.log(`🔄 [WebhookProcessorDO] Message history loaded into function calling context`, JSON.stringify(context.messageHistory));
+            // Map and load message history into the function calling context
+            this.functionCallingContext.conversationHistory =  context.messageHistory
+            console.log(`🔄 [WebhookProcessorDO] Function calling context updated`, this.functionCallingContext);
               // Process with AI using enhanced function calling
               const result = await this.functionCallingService.functionCalling(
                 message.text.body,
-                `You are a helpful smart home assistant that can control multiple devices simultaneously. 
-                Available functions:
-                - set_light_values: Control smart lights (brightness and color temperature)
-                - set_thermostat: Control thermostat (temperature and mode)
-                - control_music: Control music playback (play, pause, stop, volume)
-                
-                You can execute multiple functions in parallel when users request multiple actions.
-                For example, if they say "turn on the lights, set temperature to 22°C and play music", 
-                you should call all three functions simultaneously.
-                Always respond in a friendly and helpful manner.`,
+                context.business.settings.systemInstruction,
                 allFunctionSchemas,
                 this.env.GEMINI_API_KEY,
                 this.functionCallingContext
               );
 
               let responseText = result.finalResponse;
+
+              console.log(`🤖 [WebhookProcessorDO] AI Response: ${responseText}`);
               
               // Add execution details if functions were called
               if (result.functionsExecuted.length > 0) {
@@ -145,6 +169,15 @@ export class WebhookProcessor extends DurableObject {
                    }
                );
             
+            // Save bot response to database
+            await saveMessage(
+              db,
+              `bot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate unique wamId for bot response
+              context.user.id,
+              context.business.id,
+              'model',
+              [{ text: responseText }]  
+            );
             
             console.log(`💾 [WebhookProcessorDO] Storing successful processing result for message: ${message.id}`);
             await this.ctx.storage.put(`message:${message.id}`, {

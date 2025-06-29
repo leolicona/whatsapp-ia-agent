@@ -10,10 +10,11 @@ This document provides an analysis of the `whatsapp-ia-agent` project to facilit
     - **Runtime:** Cloudflare Workers
     - **Web Framework:** Hono
     - **Language:** TypeScript
-    - **Testing:** Vitest
-    - **CLI:** Wrangler
+    - **Database:** Cloudflare D1
     - **Schema Validation:** Zod
     - **AI:** Google Gemini AI SDK (`@google/generative-ai`)
+    - **Testing:** Vitest
+    - **CLI:** Wrangler
 
 ## Project Structure
 
@@ -21,13 +22,14 @@ The project is organized as follows:
 
 - **`src/index.ts`**: The main entry point of the application. It initializes the Hono app, applies middleware, and sets up routes.
 - **`src/core/`**: This directory contains the core business logic of the application.
-    - **`src/core/ia/`**: Handles the integration with the Google Gemini AI.
+    - **`src/core/ai/`**: Handles the integration with the Google Gemini AI, including function calling and prompt management.
+    - **`src/core/database/`**: Manages interactions with the Cloudflare D1 database, including services for users, businesses, and messages.
     - **`src/core/whatsapp/`**: Manages interactions with the WhatsApp API.
 - **`src/middleware/`**: Contains Hono middleware for various functionalities such as CORS, security headers, rate limiting, and error handling.
 - **`src/routes/`**: Defines the application's API routes.
     - **`src/routes/webhook/`**: Handles incoming WhatsApp webhooks. It utilizes a Durable Object (`WebhookProcessor`) for stateful processing of these webhooks.
 - **`tests/`**: Contains the test suite for the application.
-- **`wrangler.jsonc`**: The configuration file for the Cloudflare Worker. It specifies Durable Objects, migrations, and other necessary resources.
+- **`wrangler.jsonc`**: The configuration file for the Cloudflare Worker. It specifies Durable Objects, D1 databases, and other necessary resources.
 - **`package.json`**: Lists the project's dependencies and defines the available scripts.
 - **`tsconfig.json`**: The configuration file for the TypeScript compiler.
 - **`vitest.config.ts`**: The configuration file for the Vitest testing framework.
@@ -36,8 +38,9 @@ The project is organized as follows:
 
 - The application exposes a `/webhook` endpoint to receive and process messages from WhatsApp.
 - It uses a Cloudflare Durable Object (`WebhookProcessor`) to handle the stateful processing of incoming webhooks. This is an effective pattern for managing state in a serverless architecture.
-- The application integrates with the Google Gemini AI to generate intelligent responses to the WhatsApp messages it receives.
+- The application integrates with the Google Gemini AI to generate intelligent responses to the WhatsApp messages it receives. It uses a sophisticated function-calling mechanism to allow the AI to interact with external tools.
 - It leverages Hono middleware to address common web application requirements, including security, CORS, and rate limiting.
+- The application uses Cloudflare D1 as its database to store information about users, businesses, and messages.
 
 ## Development and Deployment
 

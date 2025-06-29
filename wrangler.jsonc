@@ -50,14 +50,14 @@
   //     "bucket_name": "auth-assets"
   //   }
   // ],
-  // D1 database for user data
-  /* "d1_databases": [
+  // D1 database for business data
+  "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "whatsapp-auth-db",
-      "database_id": "3e0dd492-4db4-48ef-bca6-2d1d40ddf69f"
+      "database_name": "wam-business-db",
+      "database_id": "16c1edd3-388b-4da5-8190-dd26403a68bd"
     }
-  ], */
+  ],
   // Queue for background tasks (optional)
   // "queues": {
   //   "producers": [
