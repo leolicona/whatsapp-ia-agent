@@ -15,7 +15,7 @@ export const embeddings = (config: EmbeddingsConfig) => {
                     taskType: 'SEMANTIC_SIMILARITY',
                 }
             });
-            
+            console.log("Embeddings result", result);
             // Extract the actual embedding values from the response
             if (!result.embeddings || result.embeddings.length === 0) {
                 throw new Error('No embeddings returned from Google GenAI API');

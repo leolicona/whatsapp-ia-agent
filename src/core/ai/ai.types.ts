@@ -9,7 +9,7 @@ export interface GeminiArgs {
   apiKey: string;
   input: string; // Simple string input that will be converted to Content[]
   model?: string;
-  systemPrompt: string;
+  systemInstruction: string;
   responseSchema?: Schema;
   tools?: FunctionDeclaration[];
   conversationHistory?: Content[]; // Support for conversation history

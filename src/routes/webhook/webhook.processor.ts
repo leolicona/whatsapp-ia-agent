@@ -11,22 +11,21 @@ import {
 import { CtaUrlInteractiveObject, CtaUrlMessagePayload } from '../../core/whatsapp/whatsApp.schema';
 import { WhatsAppClient } from '../../core/whatsapp/whatsapp';
 import { Env } from '../../bindings';
-import { createFunctionCalling } from '../../core/ai/fnCalling';
-import { functionRegistry } from '../../core/ai/fnCalling.registry';
-import { gemini } from '../../core/ai/gemini';
+import { runAIAgent } from '../../core/ai/runAIAgent';
 import type { FunctionCallingContext } from '../../core/ai/ai.types';
 import { cleanPhoneNumber } from '../../utils/utils';
 import { allFunctionSchemas } from '../../core/ai/tools';
 import { createDatabase } from '../../core/database/connection';
 import { getContext} from '../../core/database/registration.service';
 import { saveMessage } from '../../core/database/message.service';
+import { prompts } from '../../core/ai/propmts';
 
 export class WebhookProcessor extends DurableObject {
   private readonly apiUrl: string;
   public readonly env: Env;
   private functionCallingContext: FunctionCallingContext;
   private readonly whatsAppClient: ReturnType<typeof WhatsAppClient>;
-  private readonly functionCallingService: ReturnType<typeof createFunctionCalling>;
+
 
   constructor(ctx: DurableObjectState, env: Env) {
       super(ctx, env);
@@ -38,9 +37,10 @@ export class WebhookProcessor extends DurableObject {
         token: this.env.WHATSAPP_API_TOKEN,
       });
       
-      // Create function calling service with environment context
-       this.functionCallingService = createFunctionCalling(functionRegistry, gemini, this.env);
-       this.functionCallingContext = this.functionCallingService.createContext();
+      // Create function calling context
+       this.functionCallingContext = {
+        conversationHistory: []
+       }
   }
 
   async processWebhook(payload: WhatsAppWebhookPayload): Promise<MessageProcessingResult> {
@@ -125,18 +125,21 @@ export class WebhookProcessor extends DurableObject {
               [{ text: message.text.body}]
             );
             
+            
             console.log(`🔄 [WebhookProcessorDO] Message history loaded into function calling context`, JSON.stringify(context.messageHistory));
+            console.log(`🔄 [WebhookProcessorDO] Function calling context before`, this.functionCallingContext.conversationHistory);
             // Map and load message history into the function calling context
             this.functionCallingContext.conversationHistory =  context.messageHistory
-            console.log(`🔄 [WebhookProcessorDO] Function calling context updated`, this.functionCallingContext);
+            console.log(`🔄 [WebhookProcessorDO] Function calling context updated`, this.functionCallingContext.conversationHistory);
               // Process with AI using enhanced function calling
-              const result = await this.functionCallingService.functionCalling(
-                message.text.body,
-                context.business.settings.systemInstruction,
-                allFunctionSchemas,
-                this.env.GEMINI_API_KEY,
-                this.functionCallingContext
-              );
+              const result = await runAIAgent({
+                input: message.text.body,
+                systemInstruction: prompts.systemInstruction(),
+                tools: allFunctionSchemas,
+                apiKey: this.env.GEMINI_API_KEY,
+                conversationHistory: context.messageHistory,
+                env: this.env
+              });
 
               let responseText = result.finalResponse;
 

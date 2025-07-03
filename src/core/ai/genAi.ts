@@ -9,28 +9,36 @@ import type {
   GeminiResponse
 } from './ai.types';
 
-export const gemini = async ({
+
+
+export const genAi = async ({
   input,
   model = 'gemini-2.0-flash-001',
-  systemPrompt,
+  systemInstruction,
   responseSchema,
   apiKey,
   tools,
   conversationHistory,
 }: GeminiArgs): Promise<GeminiResponse> => {
   // Use conversation history if provided and not empty, otherwise create new content
-  const contents: Content[] = conversationHistory && conversationHistory.length > 0 
-    ? conversationHistory 
-    : [{
-        role: 'user',
-        parts: [{ text: input }]
-      }];
+  const contents: Content[] = [
+    ...(conversationHistory ? conversationHistory: []),
+    { role: 'user', parts: [{ text: input }] },
+  ];
+
+  console.log(`🔄 [AI] Gemini Request: ${JSON.stringify({
+    model,
+    contents,
+    config: {
+      systemInstruction
+    },
+  })}`);
 
   const ai = new GoogleGenAI({ apiKey });
 
   // Build the config object for the new SDK
   const config: any = {
-    systemInstruction: systemPrompt,
+    systemInstruction
   };
 
   // Add generation config for JSON responses
@@ -58,6 +66,8 @@ export const gemini = async ({
       config,
     });
 
+    console.log(`🔄 [AI] Gemini Response: ${JSON.stringify(response)}`);
+
     const parts = response.candidates?.[0]?.content?.parts || [];
     
     // Check for function calls in all parts
@@ -69,13 +79,14 @@ export const gemini = async ({
       }));
     
     if (functionCalls.length > 0) {
+      console.log(`🔄 [AI] Gemini Response with Function Call: ${JSON.stringify(response)}`);
       return {
         functionCall: functionCalls[0], // Keep backward compatibility
         functionCalls,
         text: null,
       };
     }
-
+    console.log(`🔄 [AI] Gemini Response with Text: ${JSON.stringify(response)}`);
     return {
       text: response.text || null,
       functionCall: null,

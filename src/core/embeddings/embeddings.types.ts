@@ -13,5 +13,5 @@ export interface StoreVectorParams {
 
 export interface EmbeddingsConfig {
     apiKey: string;
-    vectorize: Vectorize;
+    vectorize: VectorizeIndex;
 }
