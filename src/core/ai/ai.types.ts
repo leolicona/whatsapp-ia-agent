@@ -46,7 +46,7 @@ export interface FunctionCallingContext {
 }
 
 export interface FunctionRegistry {
-  [key: string]: (...args: any[]) => any;
+  [key: string]: (params: any) => Promise<any>;
 }
 
 export interface GeminiFunction {
@@ -68,10 +68,11 @@ export interface LightValues {
 export interface ThermostatSettings {
   temperature: number;
   mode: string;
+  status: string;
 }
 
 export interface MusicControl {
   action: string;
   volume?: number;
-  track?: string;
+  status: string;
 }

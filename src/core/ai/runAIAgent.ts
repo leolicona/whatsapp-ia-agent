@@ -97,9 +97,8 @@ async function executeFunctions(
         throw new Error(`Function '${name}' not found in registry`);
       }
       
-      const argValues = Object.values(args);
-      const needsEnv = fn.length > argValues.length && env;
-      const result = await fn(...argValues, ...(needsEnv ? [env] : []));
+      // All functions now expect a single object parameter with env included
+      const result = await fn({ ...args, env });
       
       return { name, args, result };
     })

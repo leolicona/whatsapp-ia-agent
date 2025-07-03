@@ -1,10 +1,10 @@
-import { FunctionDeclaration, Type } from '@google/genai';
+import { Type } from '@google/genai';
 import type { LightValues, ThermostatSettings, MusicControl } from './ai.types';
 import type { Env } from '../../bindings';
 import { embeddings } from '../embeddings/embeddings.service';
 
 // Function implementations for smart home devices
-export const setLightValues = (brightness: number, color_temp: string, env?: Env): LightValues => {
+export const setLightValues = async ({ brightness, color_temp, env }: { brightness: number; color_temp: string; env?: Env }): Promise<LightValues> => {
   console.log(`🔆 [setLightValues] Setting brightness to ${brightness}% and color temperature to ${color_temp}`);
   console.log("env", env);
   // Here you would implement the actual logic to control the lights
@@ -19,7 +19,7 @@ export const setLightValues = (brightness: number, color_temp: string, env?: Env
   };
 };
 
-export const setThermostat = (temperature: number, mode: string, env?: Env) => {
+export const setThermostat = async ({ temperature, mode, env }: { temperature: number; mode: string; env?: Env }): Promise<ThermostatSettings> => {
   console.log(`🌡️ [setThermostat] Setting temperature to ${temperature}°C in ${mode} mode`);
   
   // Access to Cloudflare services via env parameter if needed:
@@ -32,7 +32,7 @@ export const setThermostat = (temperature: number, mode: string, env?: Env) => {
   };
 };
 
-export const controlMusic = (action: string, volume?: number, env?: Env) => {
+export const controlMusic = async ({ action, volume }: { action: string; volume?: number }): Promise<MusicControl> => {
   console.log(`🎵 [controlMusic] ${action} music${volume ? ` at volume ${volume}%` : ''}`);
   
   // Access to Cloudflare services via env parameter if needed:
@@ -41,11 +41,20 @@ export const controlMusic = (action: string, volume?: number, env?: Env) => {
   return {
     action,
     volume: volume || 50,
-    status: 'success'
+    status: 'adjusted'
   };
 };
 
-/* export const searchSimilarText = async (text: string, env: Env) => {
+// Example Functions
+export const get_weather_forecast = async ({ location }: { location: string }) => {
+  console.log(`Tool Call: get_weather_forecast(location=${location})`);
+  // TODO: Make API call
+  console.log("Tool Response: {'temperature': 25, 'unit': 'celsius'}")
+  return { temperature: 25, unit: "celsius" };
+}
+
+
+export const searchSimilarText = async ({ text, env }: { text: string; env: Env }) => {
   console.log(`🔍 [searchSimilarText] Searching for similarities with text: "${text}"`);
   
   try {
@@ -78,103 +87,51 @@ export const controlMusic = (action: string, volume?: number, env?: Env) => {
     
     console.log('📝 Extracted metadata content:', metadataContent);
 
-    const testText = `Services Offered
-We provide a variety of medical services to meet your needs. This includes:
 
-General Check-ups: Annual physicals, wellness exams, and health screenings for adults and children.
-
-Pediatric Care: Well-child visits, immunizations, and treatment for common childhood illnesses.
-
-Women's Health: Pap smears, contraceptive counseling, and management of gynecological health.
-
-Chronic Disease Management: Ongoing care and support for conditions like diabetes, hypertension, asthma, and high cholesterol.
-
-Minor Procedures: Suture removal, wound care, and skin tag removal.
-Our on-site laboratory provides convenient access to common tests like blood work, urinalysis, and strep tests, with results often available quickly.`;
-
-    // Return the combined metadata content or the original text if no matches
     return {
-      context: testText,
+      context: metadataContent,
       status: 'success',
     }
   } catch (error) {
     console.error('❌ Error in searchSimilarText:', error);
-    return text; // Return original text on error
+    return { context: text, status: 'error' }; // Return consistent object structure on error
   }
 };
- */
-
-export const searchSimilarText  = (text: string,  env?: Env) => {
-  console.log(`🔍 [searchSimilarText] Searching for similarities with text: "${text}"`);
-  
-  // Access to Cloudflare services via env parameter if needed:
-  // - env.ANALYTICS_ENGINE for tracking temperature changes
-  // - env.KV for storing thermostat schedules
-  return {
-    result: "General Check-ups: Annual physicals, wellness exams, and health screenings for adults and children.",
-    status: 'success',
-  };
-};
+ 
 
 
 
-/* export const userRequestAppointment = async (text: string, env?: Env) => {
+export const userRequestAppointment = async ({text}: {text: string}) => {
   console.log(`📅 [userRequestAppointment] Processing appointment request: "${text}"`);
   
   try {
-    // Mock appointment scheduling logic
-    const appointmentTypes = [
-      'General Check-up',
-      'Pediatric Care',
-      'Women\'s Health',
-      'Chronic Disease Management',
-      'Minor Procedures'
-    ];
-    
-    // Simulate determining appointment type based on user request
-    const suggestedType = appointmentTypes[Math.floor(Math.random() * appointmentTypes.length)];
-    
-    // Mock available time slots
-    const availableSlots = [
-      '2024-02-15 09:00 AM',
-      '2024-02-15 02:30 PM',
-      '2024-02-16 10:15 AM',
-      '2024-02-16 03:45 PM',
-      '2024-02-17 11:00 AM'
-    ];
-    
-    const response = {
-      status: 'appointment_request_initiated',
-      message: 'I\'d be happy to help you schedule an appointment at Serenity Health Clinic.',
-      suggestedAppointmentType: suggestedType,
-      availableSlots: availableSlots.slice(0, 3), // Show first 3 slots
-      nextSteps: [
-        'Please let me know your preferred appointment type',
-        'Choose from the available time slots',
-        'Provide your contact information for confirmation'
-      ],
-      clinicInfo: {
-        name: 'Serenity Health Clinic',
-        phone: '(555) 123-4567',
-        address: '123 Health Street, Wellness City, WC 12345'
-      }
-    };
-    
-    console.log('✅ Appointment request processed successfully:', response);
-    
-    // In a real implementation, you might:
-    // - Store the request in env.D1 database
-    // - Send notifications via env.QUEUE
-    // - Log analytics via env.ANALYTICS_ENGINE
-    
-    return "Please confirm your appointment request here: https://serenityhealthclinic.com/confirm-appointment"
+  
+   
+    return {
+      action: "request appointment",
+      context: "As assistant, give to the user the url to schedule the appointment: URL: https://calendly.com/leolicona/30min",
+      status: 'success',
+    }
   } catch (error) {
     console.error('❌ Error in userRequestAppointment:', error);
     return 'I apologize, but there was an error processing your appointment request. Please try again or call our clinic directly at (555) 123-4567.';
   }
-}; */
+}; 
 
-
+export const getWeatherForecastSchema =  {
+        name: "get_weather_forecast",
+        description:
+          "Gets the current weather temperature for a given location.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            location: {
+              type: Type.STRING,
+            },
+          },
+          required: ["location"],
+        },
+      }
 
 // Function schemas for smart home devices
 export const setLightValuesSchema = {
@@ -217,6 +174,7 @@ export const setThermostatSchema = {
     required: ['temperature', 'mode'],
   },
 };
+
 
 // Music control schema
 export const controlMusicSchema = {
@@ -278,5 +236,6 @@ export const allFunctionSchemas = [
   controlMusicSchema,
   searchSimilarTextSchema,
   userRequestAppointmentSchema,
+  getWeatherForecastSchema,
 ];
 
