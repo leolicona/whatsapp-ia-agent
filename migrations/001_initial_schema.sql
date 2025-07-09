@@ -46,6 +46,24 @@ CREATE INDEX IF NOT EXISTS idx_messages_wam_id ON messages(wam_id);
 CREATE INDEX IF NOT EXISTS idx_businesses_owner ON businesses(owner_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
 
+-- calendar_services Table: Stores service-specific calendar configurations
+CREATE TABLE IF NOT EXISTS calendar_services (
+    id TEXT PRIMARY KEY,
+    business_id TEXT NOT NULL,
+    google_calendar_id TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    settings JSON NOT NULL, -- Pre-configured Google Calendar Event template
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_calendar_services_business_id ON calendar_services(business_id);
+CREATE INDEX IF NOT EXISTS idx_calendar_services_google_calendar_id ON calendar_services(google_calendar_id);
+CREATE INDEX IF NOT EXISTS idx_calendar_services_name ON calendar_services(business_id, name);
+
 
 
 

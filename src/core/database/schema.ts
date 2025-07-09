@@ -32,3 +32,15 @@ export const messages = sqliteTable('messages', {
   parts: text('parts', { mode: 'json' }).notNull(),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
 });
+
+// Calendar Services table
+export const calendarServices = sqliteTable('calendar_services', {
+  id: text('id').primaryKey(),
+  businessId: text('business_id').notNull().references(() => businesses.id, { onDelete: 'cascade' }),
+  googleCalendarId: text('google_calendar_id').notNull().unique(),
+  name: text('name').notNull(),
+  description: text('description'),
+  settings: text('settings', { mode: 'json' }).notNull(),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
+});

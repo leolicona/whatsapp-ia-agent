@@ -19,6 +19,7 @@ import { createDatabase } from '../../core/database/connection';
 import { getContext} from '../../core/database/registration.service';
 import { saveMessage } from '../../core/database/message.service';
 import { prompts } from '../../core/ai/propmts';
+import { getTime } from '../../utils/date';
 
 export class WebhookProcessor extends DurableObject {
   private readonly apiUrl: string;
@@ -125,6 +126,8 @@ export class WebhookProcessor extends DurableObject {
               [{ text: message.text.body}]
             );
             
+            const date = getTime({ timezone: 'America/Mexico_City' });
+            console.log(`🔄 [WebhookProcessorDO] Current date: ${date}`);
             
             console.log(`🔄 [WebhookProcessorDO] Message history loaded into function calling context`, JSON.stringify(context.messageHistory));
             console.log(`🔄 [WebhookProcessorDO] Function calling context before`, this.functionCallingContext.conversationHistory);
@@ -134,11 +137,17 @@ export class WebhookProcessor extends DurableObject {
               // Process with AI using enhanced function calling
               const result = await runAIAgent({
                 input: message.text.body,
-                systemInstruction: prompts.systemInstruction(),
+                systemInstruction: prompts.systemInstruction({ 
+                  instruction: context.business.settings.systemInstruction, 
+                  currentDate: getTime({ timezone: 'America/Mexico_City' })
+                }),
                 tools: allFunctionSchemas,
                 apiKey: this.env.GEMINI_API_KEY,
                 conversationHistory: context.messageHistory,
-                env: this.env
+                env: {
+                  ...this.env,
+                   BUSINESS_ID: context.business.id,
+                }
               });
 
               let responseText = result.finalResponse;

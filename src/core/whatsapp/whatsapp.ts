@@ -2,16 +2,13 @@ import {
   CtaUrlInteractiveObject, 
   CtaUrlMessagePayload, 
   CtaUrlMessagePayloadSchema,
-  TextMessagePayloadSchema,
-  TypingIndicatorPayloadSchema,
-  MarkAsReadPayloadSchema,
   WhatsAppConfig
 } from './whatsApp.schema';
 import { makeApiRequester } from '../makeApiRequester';
 
 const WhatsAppClient = (config: WhatsAppConfig) => {
  
-   const apiRequest  = makeApiRequester(config);
+   const apiRequest  = makeApiRequester({baseUrl: config.apiUrl, token: config.token});
 
   return {
     sendMessage: async (to: string, message: object): Promise<void> => {
@@ -21,7 +18,7 @@ const WhatsAppClient = (config: WhatsAppConfig) => {
         to,
         ...message,
       };
-      await apiRequest(body);
+      await apiRequest.post('', body);
     },
 
     sendCtaUrlMessage: async (to: string, interactive: CtaUrlInteractiveObject): Promise<void> => {
@@ -34,7 +31,7 @@ const WhatsAppClient = (config: WhatsAppConfig) => {
       };
 
       CtaUrlMessagePayloadSchema.parse(body);
-      await apiRequest(body);
+      await apiRequest.post('', body);
     },
 
     sendTypingIndicator: async (messageId: string): Promise<void> => {
@@ -46,7 +43,7 @@ const WhatsAppClient = (config: WhatsAppConfig) => {
           type: 'text'
         }
       };
-      await apiRequest(body);
+      await apiRequest.post('', body);
     },
 
     markMessageAsRead: async (messageId: string): Promise<void> => {
@@ -55,7 +52,7 @@ const WhatsAppClient = (config: WhatsAppConfig) => {
         status: 'read',
         message_id: messageId,
       };
-      await apiRequest(body);
+      await apiRequest.post('', body);
     },
   };
 };

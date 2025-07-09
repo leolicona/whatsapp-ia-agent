@@ -2,58 +2,22 @@ import { Type } from '@google/genai';
 import type { LightValues, ThermostatSettings, MusicControl } from './ai.types';
 import type { Env } from '../../bindings';
 import { embeddings } from '../embeddings/embeddings.service';
+import { getFreeBusy, createEvent } from '../calendar/calendar.service';
+import { createDatabase } from '../database/connection';
+import { getCalendarServiceByBusinessIdAndName } from '../database/calendarServices.service';
 
-// Function implementations for smart home devices
-export const setLightValues = async ({ brightness, color_temp, env }: { brightness: number; color_temp: string; env?: Env }): Promise<LightValues> => {
-  console.log(`🔆 [setLightValues] Setting brightness to ${brightness}% and color temperature to ${color_temp}`);
-  console.log("env", env);
-  // Here you would implement the actual logic to control the lights
-  // Access to Cloudflare services via env parameter if needed:
-  // - env.KV for storing device states
-  // - env.D1 for device configuration
-  // - env.R2 for device logs
-  // For now, we'll just return the values as confirmation
-  return {
-    brightness,
-    color_temp
+// Type definitions for calendar API responses
+interface FreeBusyResponse {
+  calendars: {
+    [calendarId: string]: {
+      busy: Array<{
+        start: string;
+        end: string;
+      }>;
+    };
   };
-};
-
-export const setThermostat = async ({ temperature, mode, env }: { temperature: number; mode: string; env?: Env }): Promise<ThermostatSettings> => {
-  console.log(`🌡️ [setThermostat] Setting temperature to ${temperature}°C in ${mode} mode`);
-  
-  // Access to Cloudflare services via env parameter if needed:
-  // - env.ANALYTICS_ENGINE for tracking temperature changes
-  // - env.KV for storing thermostat schedules
-  return {
-    temperature,
-    mode,
-    status: 'adjusted'
-  };
-};
-
-export const controlMusic = async ({ action, volume }: { action: string; volume?: number }): Promise<MusicControl> => {
-  console.log(`🎵 [controlMusic] ${action} music${volume ? ` at volume ${volume}%` : ''}`);
-  
-  // Access to Cloudflare services via env parameter if needed:
-  // - env.QUEUE for queuing music commands
-  // - env.KV for storing playlists
-  return {
-    action,
-    volume: volume || 50,
-    status: 'adjusted'
-  };
-};
-
-// Example Functions
-export const get_weather_forecast = async ({ location }: { location: string }) => {
-  console.log(`Tool Call: get_weather_forecast(location=${location})`);
-  // TODO: Make API call
-  console.log("Tool Response: {'temperature': 25, 'unit': 'celsius'}")
-  return { temperature: 25, unit: "celsius" };
 }
-
-
+// 
 export const searchSimilarText = async ({ text, env }: { text: string; env: Env }) => {
   console.log(`🔍 [searchSimilarText] Searching for similarities with text: "${text}"`);
   
@@ -100,103 +64,6 @@ export const searchSimilarText = async ({ text, env }: { text: string; env: Env 
  
 
 
-
-export const userRequestAppointment = async ({text}: {text: string}) => {
-  console.log(`📅 [userRequestAppointment] Processing appointment request: "${text}"`);
-  
-  try {
-  
-   
-    return {
-      action: "request appointment",
-      context: "As assistant, give to the user the url to schedule the appointment: URL: https://calendly.com/leolicona/30min",
-      status: 'success',
-    }
-  } catch (error) {
-    console.error('❌ Error in userRequestAppointment:', error);
-    return 'I apologize, but there was an error processing your appointment request. Please try again or call our clinic directly at (555) 123-4567.';
-  }
-}; 
-
-export const getWeatherForecastSchema =  {
-        name: "get_weather_forecast",
-        description:
-          "Gets the current weather temperature for a given location.",
-        parameters: {
-          type: Type.OBJECT,
-          properties: {
-            location: {
-              type: Type.STRING,
-            },
-          },
-          required: ["location"],
-        },
-      }
-
-// Function schemas for smart home devices
-export const setLightValuesSchema = {
-  name: 'set_light_values',
-  description: 'Sets the brightness and color temperature of a light.',
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      brightness: {
-        type: Type.NUMBER,
-        description: 'Light level from 0 to 100. Zero is off and 100 is full brightness',
-      },
-      color_temp: {
-        type: Type.STRING,
-        enum: ['daylight', 'cool', 'warm'],
-        description: 'Color temperature of the light fixture, which can be `daylight`, `cool` or `warm`.',
-      },
-    },
-    required: ['brightness', 'color_temp'],
-  },
-};
-
-// Thermostat control schema
-export const setThermostatSchema = {
-  name: 'set_thermostat',
-  description: 'Control the smart thermostat temperature and mode',
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      temperature: {
-        type: Type.NUMBER,
-        description: 'Target temperature in Celsius (16-30)',
-      },
-      mode: {
-        type: Type.STRING,
-        description: 'Thermostat mode: heat, cool, auto, or off',
-        enum: ['heat', 'cool', 'auto', 'off'],
-      },
-    },
-    required: ['temperature', 'mode'],
-  },
-};
-
-
-// Music control schema
-export const controlMusicSchema = {
-  name: 'control_music',
-  description: 'Control music playback and volume',
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      action: {
-        type: Type.STRING,
-        description: 'Music action: play, pause, stop, next, previous',
-        enum: ['play', 'pause', 'stop', 'next', 'previous'],
-      },
-      volume: {
-        type: Type.NUMBER,
-        description: 'Volume level (0-100), optional',
-      },
-    },
-    required: ['action'],
-  },
-};
-
 // Text similarity search schema
 export const searchSimilarTextSchema = {
   name: 'searchSimilarText',
@@ -213,29 +80,309 @@ export const searchSimilarTextSchema = {
   },
 };
 
-// Text similarity search schema
-export const userRequestAppointmentSchema = {
-  name: 'userRequestAppointment', 
-  description: 'Initiates the appointment scheduling process for a patient at the Serenity Health Clinic. Call this function as soon as a user expresses intent to book an appointment.',
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      text: {
-        type: Type.STRING,
-        description: 'The user question about their appointment request e.g. \'I want to schedule an appointment with a doctor\'',
-      },
+
+
+export const checkSpecificAvailability = async ({ serviceName, timeMin, timeMax, env }: { serviceName: string, timeMin: string, timeMax?: string, env: Env }) => {
+    console.log(`📅 [checkSpecificAvailability] Checking availability for service ${serviceName} from ${timeMin}`);
+    try {
+        const db = createDatabase(env);
+        const businessId = env.BUSINESS_ID;
+        
+        if (!businessId) {
+            throw new Error('BUSINESS_ID environment variable is not set');
+        }
+        
+        // Get calendar service configuration from database
+        const calendarService = await getCalendarServiceByBusinessIdAndName(db, businessId, serviceName);
+        
+        if (!calendarService) {
+            throw new Error(`Calendar service '${serviceName}' not found for business ${businessId}`);
+        }
+        
+        const { googleCalendarId, settings } = calendarService;
+        
+        let finalTimeMax = timeMax;
+        
+        // If timeMax is not provided, calculate it from timeMin + duration
+        if (!finalTimeMax) {
+            const { duration } = settings as { duration: number }; // duration in minutes
+            
+            if (!duration) {
+                throw new Error(`duration must be configured in calendar service settings when timeMax is not provided`);
+            }
+            
+            // Calculate timeMax by adding duration to timeMin
+            const startTime = new Date(timeMin);
+            const endTime = new Date(startTime.getTime() + duration * 60000); // Convert minutes to milliseconds
+            finalTimeMax = endTime.toISOString();
+        }
+        
+        console.log(`📅 Using calendar ${googleCalendarId} from ${timeMin} to ${finalTimeMax}`);
+        
+        const freeBusy = await getFreeBusy(googleCalendarId, timeMin, finalTimeMax) as FreeBusyResponse;
+        // Assuming the API returns a list of busy slots, if the list is empty, the slot is free.
+        const isAvailable = freeBusy.calendars[googleCalendarId].busy.length === 0;
+        return { isAvailable };
+    } catch (error) {
+        console.error('❌ Error in checkSpecificAvailability:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to check availability.';
+        return { isAvailable: false, error: errorMessage };
+    }
+};
+
+export const findGeneralAvailability = async ({ date, serviceName, env }: { date: string, serviceName: string, env: Env }) => {
+    console.log(`📅 [findGeneralAvailability] Finding availability for service ${serviceName} on ${date}`);
+    try {
+        console.log('Creating database connection...');
+        const db = createDatabase(env);
+        
+        console.log('Getting business ID from env...');
+        const businessId = env.BUSINESS_ID;
+        
+        if (!businessId) {
+            console.error('❌ Business ID not found in environment variables');
+            throw new Error('BUSINESS_ID environment variable is not set');
+        }
+        console.log(`✅ Business ID found: ${businessId}`);
+        
+        // Get calendar service configuration from database
+        console.log(`Fetching calendar service for business ${businessId} and service ${serviceName}...`);
+        const calendarService = await getCalendarServiceByBusinessIdAndName(db, businessId, serviceName);
+        
+        if (!calendarService) {
+            console.error(`❌ Calendar service not found for ${serviceName}`);
+            throw new Error(`Calendar service '${serviceName}' not found for business ${businessId}`);
+        }
+        console.log('✅ Calendar service found:', calendarService);
+        
+        const { googleCalendarId, settings } = calendarService;
+        console.log('Calendar settings:', settings);
+        
+        // Extract timeMin and timeMax from settings
+        const { openHours, closeHours, timeZone } = settings as { openHours: string, closeHours: string, timeZone: string };
+        console.log(`Time range extracted - Min: ${openHours}, Max: ${closeHours}`);
+        
+        if (!openHours || !closeHours) {
+            console.error('❌ Missing time range configuration in settings');
+            throw new Error(`timeMin and timeMax must be configured in calendar service settings`);
+        }
+        
+        const timeMin = `${date}${openHours}`;
+        const timeMax = `${date}${closeHours}`;
+        
+        console.log(`📅 Using calendar ${googleCalendarId} from ${timeMin} to ${timeMax}`);
+        
+        console.log('Fetching free/busy information...');
+        const freeBusy = await getFreeBusy(googleCalendarId, timeMin, timeMax) as FreeBusyResponse;
+        console.log('Free/Busy response:', freeBusy);
+
+        const calendarKeys = Object.keys(freeBusy.calendars);
+        if (!calendarKeys.length) {
+            console.error('❌ Invalid free/busy response: No calendars found.');
+            throw new Error('Failed to retrieve availability information.');
+        }
+
+        // Use the first calendar in the response, regardless of its ID
+        const firstCalendarKey = calendarKeys[0];
+        const busySlots = freeBusy.calendars[firstCalendarKey].busy;
+        
+        console.log('✅ Busy slots found:', busySlots);
+
+        // Generate and format available slots
+        const availableSlots = generateAvailableSlots(timeMin, timeMax, busySlots, settings as { duration: number });
+        const availabilitySummary = formatAvailability(availableSlots);
+
+        return { availability: availabilitySummary };
+
+    } catch (error) {
+        console.error('❌ Error in findGeneralAvailability:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to find availability.';
+        return { availability: '', error: errorMessage };
+    }
+};
+
+const generateAvailableSlots = (timeMin: string, timeMax: string, busySlots: { start: string, end: string }[], settings: { duration: number }) => {
+    const availableSlots = [];
+    const { duration } = settings;
+    let currentTime = new Date(timeMin);
+
+    while (currentTime < new Date(timeMax)) {
+        const slotEnd = new Date(currentTime.getTime() + duration * 60000);
+
+        const isBusy = busySlots.some(busy => {
+            const busyStart = new Date(busy.start);
+            const busyEnd = new Date(busy.end);
+            return (currentTime < busyEnd && slotEnd > busyStart);
+        });
+
+        if (!isBusy) {
+            availableSlots.push({ start: new Date(currentTime), end: slotEnd });
+        }
+
+        currentTime = slotEnd;
+    }
+
+    return availableSlots;
+};
+
+const formatAvailability = (slots: { start: Date, end: Date }[]) => {
+    if (slots.length === 0) {
+        return 'No available slots found.';
+    }
+
+    const formattedSlots = slots.map(slot => {
+        return `  - ${slot.start.toLocaleTimeString()} - ${slot.end.toLocaleTimeString()}`;
+    }).join('\n');
+
+    return `Available slots:\n${formattedSlots}`;
+};
+
+export const scheduleAppointment = async ({ serviceName, day, hour, env, eventDetails }: { serviceName: string, day: string, hour: string, env: Env, eventDetails?: any }) => {
+    console.log(`📅 [scheduleAppointment] Scheduling appointment for service ${serviceName} on ${day} at ${hour}`);
+    try {
+        const db = createDatabase(env);
+        const businessId = env.BUSINESS_ID;
+        
+        if (!businessId) {
+            throw new Error('BUSINESS_ID environment variable is not set');
+        }
+        
+        // Get calendar service configuration from database
+        const calendarService = await getCalendarServiceByBusinessIdAndName(db, businessId, serviceName);
+        
+        if (!calendarService) {
+            throw new Error(`Calendar service '${serviceName}' not found for business ${businessId}`);
+        }
+        
+        const { googleCalendarId, settings } = calendarService;
+        
+        // Extract duration from settings
+        const { duration } = settings as { duration: number }; // duration in minutes
+        
+        if (!duration) {
+            throw new Error(`duration must be configured in calendar service settings`);
+        }
+        
+        // Parse day and hour to create start and end times
+        const startDateTime = new Date(`${day}T${hour}:00`);
+        const endDateTime = new Date(startDateTime.getTime() + duration * 60000); // Add duration in milliseconds
+        
+        // Create event object with retrieved data
+        const event = {
+            summary: eventDetails?.summary || `${serviceName} Appointment`,
+            description: eventDetails?.description || `Appointment for ${serviceName}`,
+            start: {
+                dateTime: startDateTime.toISOString(),
+                timeZone: eventDetails?.timeZone || 'UTC'
+            },
+            end: {
+                dateTime: endDateTime.toISOString(),
+                timeZone: eventDetails?.timeZone || 'UTC'
+            },
+            ...eventDetails // Spread any additional event details
+        };
+        
+        console.log(`📅 Using calendar ${googleCalendarId} for ${duration} minutes`);
+        
+        const newEvent = await createEvent(googleCalendarId, event);
+        return { event: newEvent, status: 'success' };
+    } catch (error) {
+        console.error('❌ Error in scheduleAppointment:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to schedule appointment.';
+        return { event: null, status: 'error', error: errorMessage };
+    }
+};
+
+export const checkSpecificAvailabilitySchema = {
+    name: 'checkSpecificAvailability',
+    description: 'Checks if a specific time slot is available for an appointment. The calendar ID is automatically retrieved from the database. If timeMax is not provided, it will be calculated using the duration from calendar service settings.',
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            serviceName: {
+                type: Type.STRING,
+                description: 'The name of the calendar service to check availability for (e.g., "General Consultation", "Dental Cleaning", etc.). This must match a service name configured in the calendar_services table.',
+            },
+            timeMin: {
+                type: Type.STRING,
+                description: 'The start of the time slot to check in ISO 8601 format.',
+            },
+            timeMax: {
+                type: Type.STRING,
+                description: 'Optional. The end of the time slot to check in ISO 8601 format. If not provided, it will be calculated by adding the duration from calendar service settings to timeMin.',
+            },
+        },
+        required: ['serviceName', 'timeMin'],
     },
-    required: ['text'],
-  },
+};
+
+export const findGeneralAvailabilitySchema = {
+    name: 'findGeneralAvailability',
+    description: 'Finds all available appointment slots for a specific service on a given day e.g. Please help to schedule on Monday',
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            date: {
+                type: Type.STRING,
+                description: 'The date to check for availability in YYYY-MM-DD format.',
+            },
+            serviceName: {
+                type: Type.STRING,
+                description: 'The name of the calendar service to check availability for (e.g., "General Consultation", "Dental Cleaning", etc.). This must match a service name configured in the calendar_services table.',
+            },
+        },
+        required: ['date', 'serviceName'],
+    },
+};
+
+export const scheduleAppointmentSchema = {
+    name: 'scheduleAppointment',
+    description: 'Schedules a new appointment for a specific service. The calendar ID and duration are automatically retrieved from the database based on the service name.',
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            serviceName: {
+                type: Type.STRING,
+                description: 'The name of the calendar service to schedule the appointment for (e.g., "General Consultation", "Dental Cleaning", etc.). This must match a service name configured in the calendar_services table.',
+            },
+            day: {
+                type: Type.STRING,
+                description: 'The date for the appointment in YYYY-MM-DD format (e.g., "2024-01-15").',
+            },
+            hour: {
+                type: Type.STRING,
+                description: 'The time for the appointment in HH:MM format (24-hour format, e.g., "14:30" for 2:30 PM).',
+            },
+            eventDetails: {
+                type: Type.OBJECT,
+                description: 'Optional additional details for the event.',
+                properties: {
+                    summary: {
+                        type: Type.STRING,
+                        description: 'Custom summary or title for the event. If not provided, defaults to "[serviceName] Appointment".',
+                    },
+                    description: {
+                        type: Type.STRING,
+                        description: 'Custom description for the event. If not provided, defaults to "Appointment for [serviceName]".',
+                    },
+                    timeZone: {
+                        type: Type.STRING,
+                        description: 'The time zone for the appointment. If not provided, defaults to UTC.',
+                    },
+                },
+            },
+        },
+        required: ['serviceName', 'day', 'hour'],
+    },
 };
 
 // Export all schemas as an array for easy use
 export const allFunctionSchemas = [
-  setLightValuesSchema,
-  setThermostatSchema,
-  controlMusicSchema,
   searchSimilarTextSchema,
-  userRequestAppointmentSchema,
-  getWeatherForecastSchema,
+  checkSpecificAvailabilitySchema,
+  findGeneralAvailabilitySchema,
+  //scheduleAppointmentSchema,
 ];
+
+
 
