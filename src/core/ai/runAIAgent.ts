@@ -5,7 +5,7 @@ import type {
   FunctionCallingResult,
   FunctionCallingContext
 } from './ai.types';
-import { functionRegistry } from './fnCalling.registry';
+import { functionRegistry } from './tools/index';
 import type { Env } from '../../bindings';
 
 const CONFIG = {

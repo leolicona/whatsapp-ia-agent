@@ -1,25 +1,24 @@
-// Export all tool functions
-export { searchSimilarText } from './searchSimilarText';
-export { checkSpecificAvailability } from './checkSpecificAvailability';
-export { findGeneralAvailability } from './findGeneralAvailability';
-export { scheduleAppointment } from './scheduleAppointment';
-
-// Export all tool schemas
-export { searchSimilarTextSchema } from './searchSimilarText';
-export { checkSpecificAvailabilitySchema } from './checkSpecificAvailability';
-export { findGeneralAvailabilitySchema } from './findGeneralAvailability';
-export { scheduleAppointmentSchema } from './scheduleAppointment';
+// Import functions and their schemas from respective modules
+import { searchSimilarText, searchSimilarTextSchema } from './searchSimilarText';
+import { checkSpecificAvailability, checkSpecificAvailabilitySchema } from './checkSpecificAvailability';
+import { findGeneralAvailability, findGeneralAvailabilitySchema } from './findGeneralAvailability';
+import { scheduleAppointment, scheduleAppointmentSchema } from './scheduleAppointment';
+import { checkFreeBusyAndSchedule, checkFreeBusyAndScheduleSchema } from './checkfreeBussyAndSchedule';
 
 // Export all schemas as an array for easy use
 export const allFunctionSchemas = [
   searchSimilarTextSchema,
-  checkSpecificAvailabilitySchema,
-  findGeneralAvailabilitySchema,
+  //checkSpecificAvailabilitySchema,
+  //findGeneralAvailabilitySchema,
+  checkFreeBusyAndScheduleSchema,
   // scheduleAppointmentSchema, // Commented out as in original
 ];
 
-// Re-export for backward compatibility
-import { searchSimilarTextSchema } from './searchSimilarText';
-import { checkSpecificAvailabilitySchema } from './checkSpecificAvailability';
-import { findGeneralAvailabilitySchema } from './findGeneralAvailability';
-import { scheduleAppointmentSchema } from './scheduleAppointment';
+export const functionRegistry = {
+  searchSimilarText: searchSimilarText,
+  //checkSpecificAvailability: checkSpecificAvailability,
+  //findGeneralAvailability: findGeneralAvailability,
+  checkFreeBusyAndSchedule: checkFreeBusyAndSchedule,
+  //scheduleAppointment: scheduleAppointment,
+};
+
