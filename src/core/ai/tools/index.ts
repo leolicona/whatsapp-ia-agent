@@ -4,6 +4,7 @@ import { checkSpecificAvailability, checkSpecificAvailabilitySchema } from './ch
 import { findGeneralAvailability, findGeneralAvailabilitySchema } from './findGeneralAvailability';
 import { scheduleAppointment, scheduleAppointmentSchema } from './scheduleAppointment';
 import { checkFreeBusyAndSchedule, checkFreeBusyAndScheduleSchema } from './checkfreeBussyAndSchedule';
+import { listCalendarEvents, listCalendarEventsSchema } from './listEvents';
 
 // Export all schemas as an array for easy use
 export const allFunctionSchemas = [
@@ -11,6 +12,7 @@ export const allFunctionSchemas = [
   //checkSpecificAvailabilitySchema,
   //findGeneralAvailabilitySchema,
   checkFreeBusyAndScheduleSchema,
+  listCalendarEventsSchema,
   // scheduleAppointmentSchema, // Commented out as in original
 ];
 
@@ -19,6 +21,7 @@ export const functionRegistry = {
   //checkSpecificAvailability: checkSpecificAvailability,
   //findGeneralAvailability: findGeneralAvailability,
   checkFreeBusyAndSchedule: checkFreeBusyAndSchedule,
+  listCalendarEvents: listCalendarEvents,
   //scheduleAppointment: scheduleAppointment,
 };
 

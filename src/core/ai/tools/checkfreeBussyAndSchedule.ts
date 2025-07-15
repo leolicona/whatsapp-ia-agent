@@ -1,6 +1,6 @@
 import { Type } from '@google/genai';
 import type { Env } from '../../../bindings';
-import { getFreeBusy } from '../../calendar/calendar.service';
+import { getFreeBusy, createEvent } from '../../calendar/calendar.service';
 import { createDatabase } from '../../database/connection';
 import { getCalendarServiceByBusinessIdAndName } from '../../database/calendarServices.service';
 
@@ -17,13 +17,14 @@ interface FreeBusyResponse {
 }
 
 // Response types for different scenarios
-type AvailabilityStatus = 'AVAILABLE' | 'UNAVAILABLE_SUGGESTIONS' | 'AVAILABLE_SUGGESTIONS' | 'UNAVAILABLE';
+type AvailabilityStatus = 'AVAILABLE' | 'UNAVAILABLE_SUGGESTIONS' | 'AVAILABLE_SUGGESTIONS' | 'UNAVAILABLE' | 'BOOKED';
 
 interface AvailabilityResponse {
   status: AvailabilityStatus;
   time?: string;
   message?: string;
   suggestions?: Array<{ start: string; end: string }>;
+  event?: any;
 }
 
 // Helper functions for date and time parsing
@@ -170,12 +171,21 @@ export const checkFreeBusyAndSchedule = async ({
     day, 
     hour, 
     serviceName, 
-    env 
+    env,
+    shouldBook = true,
+    eventDetails
 }: { 
     day: string; 
     hour?: string; 
     serviceName: string; 
-    env: Env; 
+    env: Env;
+    shouldBook?: boolean;
+    eventDetails?: {
+        summary?: string;
+        description?: string;
+        timeZone?: string;
+        attendees?: Array<{ email: string; displayName?: string; }>;
+    };
 }): Promise<AvailabilityResponse> => {
     console.log(`📅 [checkfreeBussyAndSchedule] Checking availability for service ${serviceName} on ${day}${hour ? ` at ${hour}` : ''}`);
     console.log(`🔍 Input parameters:`, { day, hour, serviceName });
@@ -263,10 +273,47 @@ export const checkFreeBusyAndSchedule = async ({
             if (busySlots.length === 0) {
                 // The requested time is available
                 console.log(`✅ Requested time slot is available`);
-                return {
-                    status: 'AVAILABLE',
-                    time: formatDateTime(startTime)
-                };
+                
+                if (shouldBook) {
+                    // Book the appointment
+                    console.log(`📝 Booking appointment for ${hour} on ${day}`);
+                    
+                    const endTime = addHours(startTime, duration / 60); // Convert minutes to hours
+                    
+                    const event = {
+                        summary: eventDetails?.summary || `${serviceName} Appointment`,
+                        description: eventDetails?.description || `Appointment for ${serviceName}`,
+                        start: new Date(startTime).toISOString(),
+                        end: new Date(endTime).toISOString(),
+                        timeZone: eventDetails?.timeZone || timeZone || 'UTC',
+                        attendees: eventDetails?.attendees || []
+                    };
+                    
+                    console.log(`🔍 Event object being sent:`, JSON.stringify(event, null, 2));
+                    
+                    try {
+                        const newEvent = await createEvent(googleCalendarId, event);
+                        console.log(`✅ Appointment booked successfully:`, newEvent);
+                        
+                        return {
+                            status: 'BOOKED',
+                            time: formatDateTime(startTime),
+                            message: `Appointment successfully booked for ${formatDateTime(startTime)}`,
+                            event: newEvent
+                        };
+                    } catch (bookingError) {
+                        console.error(`❌ Failed to book appointment:`, bookingError);
+                        return {
+                            status: 'UNAVAILABLE',
+                            message: `Time slot is available but booking failed: ${bookingError instanceof Error ? bookingError.message : 'Unknown error'}`
+                        };
+                    }
+                } else {
+                    return {
+                        status: 'AVAILABLE',
+                        time: formatDateTime(startTime)
+                    };
+                }
             } else {
                 // The requested time is booked, fall through to find other options
                 console.log(`❌ Requested time ${hour} is booked, finding alternatives...`);
@@ -364,7 +411,7 @@ export const checkFreeBusyAndSchedule = async ({
 };
 export const checkFreeBusyAndScheduleSchema = {
     name: 'checkFreeBusyAndSchedule',
-    description: 'Checks appointment availability for a specific service. Handles two scenarios: checking a specific time slot (day + hour) or suggesting all available slots for a given day (day only). Supports natural language dates like "today", "tomorrow", "next monday".',
+    description: 'Checks appointment availability for a specific service and automatically books the appointment when a slot is available. Handles two scenarios: checking a specific time slot (day + hour) or suggesting all available slots for a given day (day only). Supports natural language dates like "today", "tomorrow", "next monday". By default, creates calendar events when slots are available unless shouldBook is explicitly set to false.',
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -378,7 +425,47 @@ export const checkFreeBusyAndScheduleSchema = {
             },
             serviceName: {
                 type: Type.STRING,
-                description: 'The name of the calendar service to check availability for (e.g., "general-gheck-ups", "pediatric-care", etc.). This must match a service name configured in the calendar_services table.'
+                description: 'The name of the calendar service to check availability for (e.g., "general-check-ups", "pediatric-care", etc.). This must match a service name configured in the calendar_services table.'
+            },
+            shouldBook: {
+                type: Type.BOOLEAN,
+                description: 'Whether to book the appointment if the requested time slot is available. Defaults to true (automatically books available slots). Set to false to only check availability without booking.'
+            },
+            eventDetails: {
+                type: Type.OBJECT,
+                description: 'Optional details for the appointment when booking.',
+                properties: {
+                    summary: {
+                        type: Type.STRING,
+                        description: 'Custom title for the appointment. If not provided, defaults to "[serviceName] Appointment".'
+                    },
+                    description: {
+                        type: Type.STRING,
+                        description: 'Custom description for the appointment. If not provided, defaults to "Appointment for [serviceName]".'
+                    },
+                    timeZone: {
+                        type: Type.STRING,
+                        description: 'Time zone for the appointment. If not provided, uses the service timezone or defaults to UTC.'
+                    },
+                    attendees: {
+                        type: Type.ARRAY,
+                        description: 'List of attendees for the appointment.',
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                email: {
+                                    type: Type.STRING,
+                                    description: 'Email address of the attendee.'
+                                },
+                                displayName: {
+                                    type: Type.STRING,
+                                    description: 'Display name of the attendee.'
+                                }
+                            },
+                            required: ['email']
+                        }
+                    }
+                }
             }
         },
         required: ['day', 'serviceName']

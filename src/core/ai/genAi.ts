@@ -13,7 +13,7 @@ import type {
 
 export const genAi = async ({
   input,
-  model = 'gemini-2.0-flash-001',
+  model = 'gemini-2.5-flash',
   systemInstruction,
   responseSchema,
   apiKey,
