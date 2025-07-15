@@ -1,8 +1,13 @@
 import { Type } from '@google/genai';
 import type { Env } from '../../../bindings';
 import { embeddings } from '../../embeddings/embeddings.service';
+import { ToolResponse } from '../ai.types';
 
-export const searchSimilarText = async ({ text, env }: { text: string; env: Env }) => {
+interface SearchSimilarTextData {
+  context: string;
+}
+
+export const searchSimilarText = async ({ text, env }: { text: string; env: Env }): Promise<ToolResponse<SearchSimilarTextData>> => {
   console.log(`🔍 [searchSimilarText] Searching for similarities with text: "${text}"`);
   
   try {
@@ -36,12 +41,25 @@ export const searchSimilarText = async ({ text, env }: { text: string; env: Env 
     console.log('📝 Extracted metadata content:', metadataContent);
 
     return {
-      context: metadataContent,
       status: 'success',
+      message: 'Similar text found.',
+      data: {
+        context: metadataContent,
+      },
     }
   } catch (error) {
     console.error('❌ Error in searchSimilarText:', error);
-    return { context: text, status: 'error' }; // Return consistent object structure on error
+    return {
+      status: 'failure',
+      message: `Error searching for similar text: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      error: {
+        code: 'SEARCH_ERROR',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
+      data: {
+        context: text,
+      }
+    };
   }
 };
 

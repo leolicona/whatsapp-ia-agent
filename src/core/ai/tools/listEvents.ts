@@ -3,6 +3,7 @@ import type { Env } from '../../../bindings';
 import { listEvents } from '../../calendar/calendar.service';
 import { createDatabase } from '../../database/connection';
 import { getCalendarServiceByBusinessIdAndName } from '../../database/calendarServices.service';
+import { ToolResponse } from '../ai.types';
 
 // Reused utility functions from checkfreeBussyAndSchedule.ts
 const parseDate = (dateInput: string): string => {
@@ -91,7 +92,7 @@ interface ListEventsResponse {
 // Response types for different scenarios
 type EventsStatus = 'EVENTS_FOUND' | 'NO_EVENTS_FOUND' | 'ERROR';
 
-interface EventsResponse {
+interface EventsResponseData {
   status: EventsStatus;
   message?: string;
   events?: Array<{
@@ -212,7 +213,7 @@ export const listCalendarEvents = async ({
   timeFrame?: string;
   maxResults?: number;
   env: Env;
-}): Promise<EventsResponse> => {
+}): Promise<ToolResponse<EventsResponseData>> => {
   console.log(`📅 [listCalendarEvents] Retrieving events for service ${serviceName}${timeFrame ? ` for ${timeFrame}` : ' (smart default)'}`);
   console.log(`🔍 Input parameters:`, { serviceName, timeFrame, maxResults });
   console.log(`🌍 Environment:`, { env });
@@ -265,11 +266,15 @@ export const listCalendarEvents = async ({
       console.log(`❌ No events found for the specified time frame`);
       console.log(`📊 Response details:`, { timeFrame, start: timeMin, end: timeMax });
       return {
-        status: 'NO_EVENTS_FOUND',
+        status: 'no_data',
         message: `No appointments found${timeFrame ? ` for ${timeFrame}` : ' in the next 14 days'}.`,
-        timeFrame: {
-          start: formatTimeFrame(start, end).split(' to ')[0],
-          end: formatTimeFrame(start, end).split(' to ')[1]
+        data: {
+          status: 'NO_EVENTS_FOUND',
+          message: `No appointments found${timeFrame ? ` for ${timeFrame}` : ' in the next 14 days'}.`,
+          timeFrame: {
+            start: formatTimeFrame(start, end).split(' to ')[0],
+            end: formatTimeFrame(start, end).split(' to ')[1]
+          }
         }
       };
     }
@@ -302,12 +307,16 @@ export const listCalendarEvents = async ({
     console.log(`📝 Formatted events:`, JSON.stringify(formattedEvents, null, 2));
     
     return {
-      status: 'EVENTS_FOUND',
+      status: 'success',
       message: `Found ${formattedEvents.length} appointment${formattedEvents.length === 1 ? '' : 's'}${timeFrame ? ` for ${timeFrame}` : ' in the next 14 days'}.`,
-      events: formattedEvents,
-      timeFrame: {
-        start: formatTimeFrame(start, end).split(' to ')[0],
-        end: formatTimeFrame(start, end).split(' to ')[1]
+      data: {
+        status: 'EVENTS_FOUND',
+        message: `Found ${formattedEvents.length} appointment${formattedEvents.length === 1 ? '' : 's'}${timeFrame ? ` for ${timeFrame}` : ' in the next 14 days'}.`,
+        events: formattedEvents,
+        timeFrame: {
+          start: formatTimeFrame(start, end).split(' to ')[0],
+          end: formatTimeFrame(start, end).split(' to ')[1]
+        }
       }
     };
     
@@ -317,8 +326,16 @@ export const listCalendarEvents = async ({
     console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
     const errorMessage = error instanceof Error ? error.message : 'Failed to retrieve calendar events.';
     return {
-      status: 'ERROR',
-      message: errorMessage
+      status: 'failure',
+      message: errorMessage,
+      error: {
+        code: 'CALENDAR_EVENTS_ERROR',
+        message: errorMessage
+      },
+      data: {
+        status: 'ERROR',
+        message: errorMessage
+      }
     };
   }
 };

@@ -76,3 +76,13 @@ export interface MusicControl {
   volume?: number;
   status: string;
 }
+
+export interface ToolResponse<T> {
+  status: 'success' | 'failure' | 'no_data' | 'partial_success';
+  message: string;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+  };
+}

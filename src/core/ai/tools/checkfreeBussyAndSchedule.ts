@@ -3,6 +3,7 @@ import type { Env } from '../../../bindings';
 import { getFreeBusy, createEvent } from '../../calendar/calendar.service';
 import { createDatabase } from '../../database/connection';
 import { getCalendarServiceByBusinessIdAndName } from '../../database/calendarServices.service';
+import { ToolResponse } from '../ai.types';
 
 // Type definitions for calendar API responses
 interface FreeBusyResponse {
@@ -19,7 +20,7 @@ interface FreeBusyResponse {
 // Response types for different scenarios
 type AvailabilityStatus = 'AVAILABLE' | 'UNAVAILABLE_SUGGESTIONS' | 'AVAILABLE_SUGGESTIONS' | 'UNAVAILABLE' | 'BOOKED';
 
-interface AvailabilityResponse {
+interface AvailabilityResponseData {
   status: AvailabilityStatus;
   time?: string;
   message?: string;
@@ -186,7 +187,7 @@ export const checkFreeBusyAndSchedule = async ({
         timeZone?: string;
         attendees?: Array<{ email: string; displayName?: string; }>;
     };
-}): Promise<AvailabilityResponse> => {
+}): Promise<ToolResponse<AvailabilityResponseData>> => {
     console.log(`📅 [checkfreeBussyAndSchedule] Checking availability for service ${serviceName} on ${day}${hour ? ` at ${hour}` : ''}`);
     console.log(`🔍 Input parameters:`, { day, hour, serviceName });
     
@@ -252,8 +253,12 @@ export const checkFreeBusyAndSchedule = async ({
                 if (requestedTime <= now) {
                     console.log(`❌ Requested time ${hour} is in the past for today`);
                     return {
-                        status: 'UNAVAILABLE',
-                        message: 'The requested time has already passed. Please choose a future time.'
+                        status: 'failure',
+                        message: 'The requested time has already passed. Please choose a future time.',
+                        data: {
+                            status: 'UNAVAILABLE',
+                            message: 'The requested time has already passed. Please choose a future time.'
+                        }
                     };
                 }
             }
@@ -296,22 +301,38 @@ export const checkFreeBusyAndSchedule = async ({
                         console.log(`✅ Appointment booked successfully:`, newEvent);
                         
                         return {
-                            status: 'BOOKED',
-                            time: formatDateTime(startTime),
+                            status: 'success',
                             message: `Appointment successfully booked for ${formatDateTime(startTime)}`,
-                            event: newEvent
+                            data: {
+                                status: 'BOOKED',
+                                time: formatDateTime(startTime),
+                                message: `Appointment successfully booked for ${formatDateTime(startTime)}`,
+                                event: newEvent
+                            }
                         };
                     } catch (bookingError) {
                         console.error(`❌ Failed to book appointment:`, bookingError);
                         return {
-                            status: 'UNAVAILABLE',
-                            message: `Time slot is available but booking failed: ${bookingError instanceof Error ? bookingError.message : 'Unknown error'}`
+                            status: 'failure',
+                            message: `Time slot is available but booking failed: ${bookingError instanceof Error ? bookingError.message : 'Unknown error'}`,
+                            error: {
+                                code: 'BOOKING_FAILED',
+                                message: bookingError instanceof Error ? bookingError.message : 'Unknown error'
+                            },
+                            data: {
+                                status: 'UNAVAILABLE',
+                                message: `Time slot is available but booking failed: ${bookingError instanceof Error ? bookingError.message : 'Unknown error'}`
+                            }
                         };
                     }
                 } else {
                     return {
-                        status: 'AVAILABLE',
-                        time: formatDateTime(startTime)
+                        status: 'success',
+                        message: 'Time slot is available.',
+                        data: {
+                            status: 'AVAILABLE',
+                            time: formatDateTime(startTime)
+                        }
                     };
                 }
             } else {
@@ -370,8 +391,12 @@ export const checkFreeBusyAndSchedule = async ({
                 ? 'Sorry, there are no more available appointments today.'
                 : 'Sorry, there are no available appointments on that day.';
             return {
-                status: 'UNAVAILABLE',
-                message
+                status: 'no_data',
+                message,
+                data: {
+                    status: 'UNAVAILABLE',
+                    message
+                }
             };
         }
         
@@ -386,16 +411,24 @@ export const checkFreeBusyAndSchedule = async ({
             // Original request was for a specific hour that was unavailable
             console.log(`🔄 Returning alternative suggestions for unavailable requested time`);
             return {
-                status: 'UNAVAILABLE_SUGGESTIONS',
+                status: 'partial_success',
                 message: 'That time is booked, but we have other openings on that day.',
-                suggestions: formattedSuggestions
+                data: {
+                    status: 'UNAVAILABLE_SUGGESTIONS',
+                    message: 'That time is booked, but we have other openings on that day.',
+                    suggestions: formattedSuggestions
+                }
             };
         } else {
             // Original request was just for the day
             console.log(`📋 Returning all available slots for the day`);
             return {
-                status: 'AVAILABLE_SUGGESTIONS',
-                suggestions: formattedSuggestions
+                status: 'success',
+                message: 'Available slots found.',
+                data: {
+                    status: 'AVAILABLE_SUGGESTIONS',
+                    suggestions: formattedSuggestions
+                }
             };
         }
         
@@ -404,8 +437,16 @@ export const checkFreeBusyAndSchedule = async ({
         console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
         const errorMessage = error instanceof Error ? error.message : 'Failed to check availability.';
         return {
-            status: 'UNAVAILABLE',
-            message: errorMessage
+            status: 'failure',
+            message: errorMessage,
+            error: {
+                code: 'AVAILABILITY_CHECK_FAILED',
+                message: errorMessage
+            },
+            data: {
+                status: 'UNAVAILABLE',
+                message: errorMessage
+            }
         };
     }
 };
