@@ -30,3 +30,11 @@ export const listEvents = async (calendarId: string, timeMin: string, timeMax: s
   return { items: response };
 };
 
+export const updateEvent = async (calendarId: string, eventId: string, event: any) => {
+  return apiRequester.put(`/calendar/events/${calendarId}/${eventId}`, event);
+};
+
+export const deleteEvent = async (calendarId: string, eventId: string) => {
+  return apiRequester.delete(`/calendar/events/${calendarId}/${eventId}`);
+};
+
