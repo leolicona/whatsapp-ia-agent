@@ -50,3 +50,49 @@ The following scripts are available in `package.json`:
 - **`npm run dev`**: Starts the application in development mode using Wrangler.
 - **`npm run deploy`**: Deploys the application to the Cloudflare network.
 - **`npm test`**: Executes the project's test suite.
+
+## Tool Analysis
+
+### `checkfreeBussyAndSchedule.ts`
+
+This tool is responsible for checking appointment availability and booking new appointments. It is a critical component of the AI agent's scheduling capabilities.
+
+**Key Features:**
+
+- **Dynamic Availability Check:** The tool can check for availability in two ways:
+    1. **Specific Time Slot:** If the user provides a specific day and time, the tool checks if that exact slot is available.
+    2. **Full Day Scan:** If the user only provides a day, the tool scans the entire day and returns all available slots.
+- **Automated Booking:** If a requested time slot is available, the tool can automatically book the appointment by creating a new event in the Google Calendar.
+- **Natural Language Date Parsing:** The tool can understand and process natural language dates, such as "today," "tomorrow," and "next monday."
+- **Configurable Services:** The tool is designed to work with multiple calendar services, each with its own settings for business hours, appointment duration, and Google Calendar ID.
+
+**Workflow:**
+
+1. **Input:** The tool takes the desired day, an optional time, and the service name as input.
+2. **Configuration:** It fetches the relevant calendar service configuration from the database.
+3. **Availability Check:** It checks the Google Calendar for free/busy times within the specified window.
+4. **Booking/Suggestions:**
+    - If a specific time is requested and available, it books the appointment.
+    - If no time is specified or the requested time is unavailable, it returns a list of suggested time slots.
+
+This tool is essential for enabling the AI agent to handle the entire appointment scheduling process, from checking availability to confirming the booking.
+
+### `listEvents.ts`
+
+This tool is responsible for retrieving a list of calendar events for a specific service. It is a versatile tool that can be used to get a general overview of upcoming appointments or to find specific events within a given timeframe.
+
+**Key Features:**
+
+- **Flexible Timeframes:** The tool can retrieve events for a variety of timeframes, including:
+    - **Smart Default:** By default, it fetches events for the next 14 days.
+    - **Natural Language:** It understands natural language queries such as "today," "tomorrow," "this week," "next week," and specific days of the week.
+- **Service-Specific:** The tool retrieves events for a specific calendar service, which is determined by the `serviceName` parameter.
+- **Detailed Output:** The tool returns a rich set of information for each event, including the event ID, title, description, start and end times, location, and a list of attendees.
+
+**Workflow:**
+
+1. **Input:** The tool takes a `serviceName` and an optional `timeFrame` as input.
+2. **Configuration:** It fetches the `googleCalendarId` for the specified service from the database.
+3. **Timeframe Parsing:** It parses the `timeFrame` input to determine the start and end times for the event search.
+4. **Event Retrieval:** It calls the `listEvents` function from the Google Calendar service to retrieve the events.
+5. **Output:** It returns a formatted list of events that fall within the specified timeframe.

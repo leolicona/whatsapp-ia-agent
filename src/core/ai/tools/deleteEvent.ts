@@ -1,0 +1,135 @@
+import { Type } from '@google/genai';
+import type { Env } from '../../../bindings';
+import { deleteEvent as deleteCalendarEvent } from '../../calendar/calendar.service';
+import { createDatabase } from '../../database/connection';
+import { getCalendarServiceByBusinessIdAndName } from '../../database/calendarServices.service';
+import { ToolResponse } from '../ai.types';
+
+// Type definitions for the delete event process
+type DeleteEventStatus = 'SUCCESS' | 'ERROR';
+
+interface DeleteEventResponseData {
+  status: DeleteEventStatus;
+  message?: string;
+}
+
+export const deleteEvent = async ({
+    serviceName,
+    eventId,
+    env
+}: {
+    serviceName: string;
+    eventId: string;
+    env: Env;
+}): Promise<ToolResponse<DeleteEventResponseData>> => {
+    console.log(`🗑️ [deleteEvent] Starting event deletion process`);
+    console.log(`📋 [deleteEvent] Parameters:`, { serviceName, eventId });
+    
+    try {
+        // Initialize database connection
+        console.log(`🔌 [deleteEvent] Creating database connection`);
+        const db = createDatabase(env);
+        const businessId = env.BUSINESS_ID;
+        
+        console.log(`🏢 [deleteEvent] Business ID:`, businessId);
+        
+        if (!businessId) {
+            console.error(`❌ [deleteEvent] BUSINESS_ID environment variable is not set`);
+            throw new Error('BUSINESS_ID environment variable is not set');
+        }
+        
+        // 1. Get calendar service by name
+        console.log(`🔍 [deleteEvent] Looking up calendar service: ${serviceName} for business: ${businessId}`);
+        const calendarService = await getCalendarServiceByBusinessIdAndName(db, businessId, serviceName);
+        
+        if (!calendarService) {
+            console.error(`❌ [deleteEvent] Calendar service not found`, { businessId, serviceName });
+            return {
+                status: 'failure',
+                message: `Calendar service '${serviceName}' not found.`,
+                data: {
+                    status: 'ERROR',
+                    message: `Calendar service '${serviceName}' not found.`
+                }
+            };
+        }
+        
+        console.log(`✅ [deleteEvent] Calendar service found:`, {
+            id: calendarService.id,
+            name: calendarService.name,
+            googleCalendarId: calendarService.googleCalendarId
+        });
+        
+        // 2. Delete the event
+        const { googleCalendarId } = calendarService;
+        console.log(`🗑️ [deleteEvent] Attempting to delete event from Google Calendar`, {
+            googleCalendarId,
+            eventId
+        });
+        
+        await deleteCalendarEvent(googleCalendarId, eventId);
+        
+        console.log(`✅ [deleteEvent] Event deleted successfully from Google Calendar`);
+        console.log(`📊 [deleteEvent] Deletion summary:`, {
+            eventId,
+            serviceName,
+            googleCalendarId,
+            businessId,
+            timestamp: new Date().toISOString()
+        });
+        
+        return {
+            status: 'success',
+            message: `The event with ID ${eventId} has been successfully deleted.`,
+            data: {
+                status: 'SUCCESS',
+                message: `The event with ID ${eventId} has been successfully deleted.`
+            }
+        };
+        
+    } catch (error) {
+        console.error(`❌ [deleteEvent] Error occurred during deletion process:`, error);
+        console.error(`🔍 [deleteEvent] Error details:`, {
+            errorType: error instanceof Error ? error.constructor.name : typeof error,
+            errorMessage: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            serviceName,
+            eventId,
+            timestamp: new Date().toISOString()
+        });
+        
+        const errorMessage = error instanceof Error ? error.message : 'Failed to delete event.';
+        
+        return {
+            status: 'failure',
+            message: errorMessage,
+            error: {
+                code: 'DELETE_EVENT_FAILED',
+                message: errorMessage
+            },
+            data: {
+                status: 'ERROR',
+                message: errorMessage
+            }
+        };
+    }
+};
+
+export const deleteEventSchema = {
+    name: 'deleteEvent',
+    description: "Deletes a calendar event for a specific service and event ID. The event ID must be obtained from a previous call to listCalendarEvents.",
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            serviceName: {
+                type: Type.STRING,
+                description: 'The name of the calendar service to delete the event from (e.g., "clinic_primary").'
+            },
+            eventId: {
+                type: Type.STRING,
+                description: 'The ID of the event to delete. This ID must be obtained from a previous call to listCalendarEvents. This tool will DELETE/CANCEL the appointment with this ID.'
+            }
+        },
+        required: ['serviceName', 'eventId']
+    }
+};

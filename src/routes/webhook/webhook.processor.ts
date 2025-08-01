@@ -18,7 +18,7 @@ import { allFunctionSchemas } from '../../core/ai/tools';
 import { createDatabase } from '../../core/database/connection';
 import { getContext} from '../../core/database/registration.service';
 import { saveMessage } from '../../core/database/message.service';
-import { prompts } from '../../core/ai/propmts';
+import { prompts, coreInstructions } from '../../core/ai/propmts';
 import { getTime } from '../../utils/date';
 
 export class WebhookProcessor extends DurableObject {
@@ -138,7 +138,7 @@ export class WebhookProcessor extends DurableObject {
               const result = await runAIAgent({
                 input: message.text.body,
                 systemInstruction: prompts.systemInstruction({ 
-                  instruction: context.business.settings.systemInstruction, 
+                  instruction: coreInstructions, //context.business.settings.systemInstruction, 
                   currentDate: getTime({ timezone: 'America/Mexico_City' })
                 }),
                 tools: allFunctionSchemas,
