@@ -147,15 +147,15 @@ const formatDateTime = (date: Date): string => {
 
 // Main function
 export const updateAppointment = async ({
-    serviceName,
-    eventId,
-    newDay,
-    newTime,
-    newDuration,
-    eventDetails,
-    env
+  calendarName,
+  eventId,
+  newDay,
+  newTime,
+  newDuration,
+  eventDetails,
+  env
 }: {
-    serviceName: string;
+  calendarName: string;
     eventId: string;
     newDay?: string;
     newTime?: string;
@@ -164,14 +164,14 @@ export const updateAppointment = async ({
     env: Env;
 }): Promise<ToolResponse<UpdateAppointmentResponseData>> => {
     try {
-        console.log(`📝 Updating appointment for service: ${serviceName}, Event ID: ${eventId}`);
+        console.log(`📝 Updating appointment for service: ${calendarName}, Event ID: ${eventId}`);
         
         // Get database connection and calendar service
         const db = createDatabase(env);
-        const calendarService = await getCalendarServiceByBusinessIdAndName(db, env.BUSINESS_ID, serviceName);
+        const calendarService = await getCalendarServiceByBusinessIdAndName(db, env.BUSINESS_ID, calendarName);
 
         if (!calendarService) {
-            throw new Error(`Calendar service '${serviceName}' not found. Please check the service name.`);
+            throw new Error(`Calendar service '${calendarName}' not found. Please check the service name.`);
         }
 
         const { googleCalendarId, settings } = calendarService;
@@ -295,7 +295,7 @@ export const updateAppointmentSchema = {
     parameters: {
         type: Type.OBJECT,
         properties: {
-            serviceName: {
+            calendarName: {
                 type: Type.STRING,
                 description: 'The name of the calendar service that contains the appointment to update (e.g., "general-check-ups", "pediatric-care", etc.). This must match a service name configured in the calendar_services table.'
             },
@@ -352,6 +352,6 @@ export const updateAppointmentSchema = {
                 }
             }
         },
-        required: ['serviceName', 'eventId']
+        required: ['calendarName', 'eventId']
     }
 };

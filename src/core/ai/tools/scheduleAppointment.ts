@@ -144,14 +144,14 @@ const formatDateTime = (date: Date): string => {
 
 // Main function
 export const scheduleAppointment = async ({
-    serviceName,
+    calendarName,
     day,
     time,
     duration = 60,
     eventDetails,
     env
 }: {
-    serviceName: string;
+    calendarName: string;
     day: string;
     time: string;
     duration?: number;
@@ -159,15 +159,15 @@ export const scheduleAppointment = async ({
     env: Env;
 }): Promise<ToolResponse<any>> => {
     try {
-        console.log(`📅 Scheduling appointment for service: ${serviceName}`);
+        console.log(`📅 Scheduling appointment for service: ${calendarName}`);
         console.log(`📅 Date: ${day}, Time: ${time}, Duration: ${duration} minutes`);
 
         // Get database connection and calendar service
         const db = createDatabase(env);
-        const calendarService = await getCalendarServiceByBusinessIdAndName(db, env.BUSINESS_ID, serviceName);
+        const calendarService = await getCalendarServiceByBusinessIdAndName(db, env.BUSINESS_ID, calendarName);
 
         if (!calendarService) {
-            throw new Error(`Calendar service '${serviceName}' not found. Please check the service name.`);
+            throw new Error(`Calendar service '${calendarName}' not found. Please check the service name.`);
         }
 
         const { googleCalendarId, settings } = calendarService;
@@ -200,8 +200,8 @@ export const scheduleAppointment = async ({
 
         // Create the event object
         const event = {
-            summary: eventDetails?.summary || `${serviceName} Appointment`,
-            description: eventDetails?.description || `Appointment for ${serviceName}`,
+            summary: eventDetails?.summary || `${calendarName} Appointment`,
+      description: eventDetails?.description || `Appointment for ${calendarName}`,
             start: startTime.toISOString(),
             end: endTime.toISOString(),
             timeZone: eventDetails?.timeZone || timeZone || 'UTC',
@@ -243,14 +243,14 @@ export const scheduleAppointment = async ({
 // Schema definition
 export const scheduleAppointmentSchema = {
     name: 'scheduleAppointment',
-    description: `SCHEDULING TOOL ONLY - Books a specific appointment at a given date and time. This tool is for SCHEDULING/BOOKING appointments only, never for checking availability or deleting appointments. Use this when the user wants to book a specific time slot. For checking availability, use getCalendarFreeBusy or checkFreeBusyAndSchedule. For deleting appointments, use deleteEvent.`,
+    description: `Schedules an appointment for a specific calendar service at the requested date and time. Before using this function, verify the time slot availability. The function accepts a calendar name (e.g., "general-check-ups"), date (e.g., "tomorrow", "next monday", or "YYYY-MM-DD"), and time (e.g., "2:30 PM", "14:30").`,
     parameters: {
         type: Type.OBJECT,
         properties: {
-            serviceName: {
-                type: Type.STRING,
-                description: 'The name of the calendar service to schedule the appointment for (e.g., "general-check-ups", "pediatric-care", etc.). This must match a service name configured in the calendar_services table.'
-            },
+            calendarName: {
+      type: Type.STRING,
+      description: 'The name of the calendar service to schedule the appointment for (e.g., "general-check-ups", "pediatric-care", etc.).'
+    },
             day: {
                 type: Type.STRING,
                 description: 'The day to schedule the appointment. Supports formats like "today", "tomorrow", "next monday", or "YYYY-MM-DD".'
@@ -269,11 +269,11 @@ export const scheduleAppointmentSchema = {
                 properties: {
                     summary: {
                         type: Type.STRING,
-                        description: 'Custom title for the appointment. If not provided, defaults to "[serviceName] Appointment".'
+                        description: 'Custom title for the appointment. If not provided, defaults to "[calendarName] Appointment".'
                     },
                     description: {
                         type: Type.STRING,
-                        description: 'Custom description for the appointment. If not provided, defaults to "Appointment for [serviceName]".'
+                        description: 'Custom description for the appointment. If not provided, defaults to "Appointment for [calendarName]".'
                     },
                     timeZone: {
                         type: Type.STRING,
@@ -300,6 +300,6 @@ export const scheduleAppointmentSchema = {
                 }
             }
         },
-        required: ['serviceName', 'day', 'time']
+        required: ['calendarName', 'day', 'time']
     }
 };

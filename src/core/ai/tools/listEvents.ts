@@ -204,18 +204,18 @@ const formatTimeFrame = (start: Date, end: Date): string => {
 };
 
 export const listCalendarEvents = async ({
-  serviceName,
+  calendarName,
   timeFrame,
-  maxResults = 50,
+  maxResults,
   env
 }: {
-  serviceName: string;
+  calendarName: string;
   timeFrame?: string;
   maxResults?: number;
   env: Env;
 }): Promise<ToolResponse<EventsResponseData>> => {
-  console.log(`📅 [listCalendarEvents] Retrieving events for service ${serviceName}${timeFrame ? ` for ${timeFrame}` : ' (smart default)'}`);
-  console.log(`🔍 Input parameters:`, { serviceName, timeFrame, maxResults });
+  console.log(`📅 [listCalendarEvents] Retrieving events for service ${calendarName}${timeFrame ? ` for ${timeFrame}` : ' (smart default)'}`);
+  console.log(`🔍 Input parameters:`, { calendarName, timeFrame, maxResults });
   console.log(`🌍 Environment:`, { env });
   
   try {
@@ -232,14 +232,14 @@ export const listCalendarEvents = async ({
       throw new Error('BUSINESS_ID environment variable is not set');
     }
     
-    console.log(`➡️ Calling getCalendarServiceByBusinessIdAndName with businessId: ${businessId}, serviceName: ${serviceName}`);
-    const calendarService = await getCalendarServiceByBusinessIdAndName(db, businessId, serviceName);
+    console.log(`➡️ Calling getCalendarServiceByBusinessIdAndName with businessId: ${businessId}, calendarName: ${calendarName}`);
+    const calendarService = await getCalendarServiceByBusinessIdAndName(db, businessId, calendarName);
     console.log(`📊 Calendar service found:`, calendarService);
     console.log(`🔍 Calendar service details:`, JSON.stringify(calendarService, null, 2));
     
     if (!calendarService) {
-      console.error(`❌ Calendar service not found`, { businessId, serviceName });
-      throw new Error(`Calendar service '${serviceName}' not found for business ${businessId}`);
+      console.error(`❌ Calendar service not found`, { businessId, calendarName });
+      throw new Error(`Calendar service '${calendarName}' not found for business ${businessId}`);
     }
     
     const { googleCalendarId, settings } = calendarService;
@@ -342,14 +342,14 @@ export const listCalendarEvents = async ({
 
 export const listCalendarEventsSchema = {
   name: 'listCalendarEvents',
-  description: 'Retrieves calendar events for a specific service. Supports two scenarios: Smart Default Time Frame (current time to 14 days out) for general requests, and Specific Time Frame Request for user-defined periods like "today", "tomorrow", "this week", "next week", "monday", "next friday", etc. e.g. I would like to see my appointments for tomorrow.',
+  description: 'Retrieve scheduled appointments from a calendar name. Supports two scenarios: Smart Default Time Frame (current time to 14 days out) for general requests, and Specific Time Frame Request for user-defined periods like "today", "tomorrow", "this week", "next week", "monday", "next friday", etc. e.g. I would like to see my appointments for tomorrow.',
   parameters: {
     type: Type.OBJECT,
     properties: {
-      serviceName: {
-        type: Type.STRING,
-        description: 'The name of the calendar service to retrieve events from (e.g., "general-check-ups", "pediatric-care", etc.). This must match a service name configured in the calendar_services table.'
-      },
+      calendarName: {
+      type: Type.STRING,
+      description: 'The name of the calendar to retrieve events from (e.g., "clinic_primary", "pediatric_care", etc.).'
+    },
       timeFrame: {
         type: Type.STRING,
         description: 'Optional time frame for retrieving events. Supports natural language like "today", "tomorrow", "this week", "next week", "monday", "next friday", etc. If omitted, uses smart default (current time to 14 days out).'
@@ -359,6 +359,6 @@ export const listCalendarEventsSchema = {
         description: 'Optional maximum number of events to return (default: 50, max: 250).'
       }
     },
-    required: ['serviceName']
+    required: ['calendarName']
   }
 };

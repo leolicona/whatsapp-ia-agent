@@ -171,14 +171,14 @@ const calculateFreeSlots = (dayStart: string, dayEnd: string, busySlots: Array<{
 export const checkFreeBusyAndSchedule = async ({ 
     day, 
     hour, 
-    serviceName, 
+    calendarName, 
     env,
     shouldBook = true,
     eventDetails
 }: { 
     day: string; 
     hour?: string; 
-    serviceName: string; 
+    calendarName: string; 
     env: Env;
     shouldBook?: boolean;
     eventDetails?: {
@@ -188,8 +188,8 @@ export const checkFreeBusyAndSchedule = async ({
         attendees?: Array<{ email: string; displayName?: string; }>;
     };
 }): Promise<ToolResponse<AvailabilityResponseData>> => {
-    console.log(`📅 [checkfreeBussyAndSchedule] Checking availability for service ${serviceName} on ${day}${hour ? ` at ${hour}` : ''}`);
-    console.log(`🔍 Input parameters:`, { day, hour, serviceName });
+    console.log(`📅 [checkfreeBussyAndSchedule] Checking availability for service ${calendarName} on ${day}${hour ? ` at ${hour}` : ''}`);
+  console.log(`🔍 Input parameters:`, { day, hour, calendarName });
     
     try {
         // 1. Parse the input 'day' into a specific calendar date
@@ -205,11 +205,11 @@ export const checkFreeBusyAndSchedule = async ({
             throw new Error('BUSINESS_ID environment variable is not set');
         }
         
-        const calendarService = await getCalendarServiceByBusinessIdAndName(db, businessId, serviceName);
+        const calendarService = await getCalendarServiceByBusinessIdAndName(db, businessId, calendarName);
         console.log(`📊 Calendar service found:`, calendarService);
         
         if (!calendarService) {
-            throw new Error(`Calendar service '${serviceName}' not found for business ${businessId}`);
+            throw new Error(`Calendar service '${calendarName}' not found for business ${businessId}`);
         }
         
         const { googleCalendarId, settings } = calendarService;
@@ -286,8 +286,8 @@ export const checkFreeBusyAndSchedule = async ({
                     const endTime = addHours(startTime, duration / 60); // Convert minutes to hours
                     
                     const event = {
-                        summary: eventDetails?.summary || `${serviceName} Appointment`,
-                        description: eventDetails?.description || `Appointment for ${serviceName}`,
+                        summary: eventDetails?.summary || `${calendarName} Appointment`,
+        description: eventDetails?.description || `Appointment for ${calendarName}`,
                         start: new Date(startTime).toISOString(),
                         end: new Date(endTime).toISOString(),
                         timeZone: eventDetails?.timeZone || timeZone || 'UTC',
@@ -464,10 +464,10 @@ export const checkFreeBusyAndScheduleSchema = {
                 type: Type.STRING,
                 description: 'Optional specific hour to check (e.g., "5pm", "5:30pm", "17:00", "2:30 PM"). If provided, checks that specific time slot. If omitted, returns all available slots for the day.'
             },
-            serviceName: {
-                type: Type.STRING,
-                description: 'The name of the calendar service to check availability for (e.g., "general-check-ups", "pediatric-care", etc.). This must match a service name configured in the calendar_services table.'
-            },
+            calendarName: {
+      type: Type.STRING,
+      description: 'The name of the calendar service to check availability for (e.g., "general-check-ups", "pediatric-care", etc.). This must match a service name configured in the calendar_services table.'
+    },
             shouldBook: {
                 type: Type.BOOLEAN,
                 description: 'Whether to book the appointment if the requested time slot is available. Defaults to true (automatically books available slots). Set to false to only check availability without booking.'
@@ -478,11 +478,11 @@ export const checkFreeBusyAndScheduleSchema = {
                 properties: {
                     summary: {
                         type: Type.STRING,
-                        description: 'Custom title for the appointment. If not provided, defaults to "[serviceName] Appointment".'
+                        description: 'Custom title for the appointment. If not provided, defaults to "[calendarName] Appointment".'
                     },
                     description: {
                         type: Type.STRING,
-                        description: 'Custom description for the appointment. If not provided, defaults to "Appointment for [serviceName]".'
+                        description: 'Custom description for the appointment. If not provided, defaults to "Appointment for [calendarName]".'
                     },
                     timeZone: {
                         type: Type.STRING,
@@ -509,6 +509,6 @@ export const checkFreeBusyAndScheduleSchema = {
                 }
             }
         },
-        required: ['day', 'serviceName']
+        required: ['day', 'calendarName']
     }
 };

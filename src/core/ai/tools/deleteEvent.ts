@@ -14,16 +14,16 @@ interface DeleteEventResponseData {
 }
 
 export const deleteEvent = async ({
-    serviceName,
-    eventId,
-    env
+  calendarName,
+  eventId,
+  env
 }: {
-    serviceName: string;
+  calendarName: string;
     eventId: string;
     env: Env;
 }): Promise<ToolResponse<DeleteEventResponseData>> => {
     console.log(`🗑️ [deleteEvent] Starting event deletion process`);
-    console.log(`📋 [deleteEvent] Parameters:`, { serviceName, eventId });
+    console.log(`📋 [deleteEvent] Parameters:`, { calendarName, eventId });
     
     try {
         // Initialize database connection
@@ -39,20 +39,20 @@ export const deleteEvent = async ({
         }
         
         // 1. Get calendar service by name
-        console.log(`🔍 [deleteEvent] Looking up calendar service: ${serviceName} for business: ${businessId}`);
-        const calendarService = await getCalendarServiceByBusinessIdAndName(db, businessId, serviceName);
-        
-        if (!calendarService) {
-            console.error(`❌ [deleteEvent] Calendar service not found`, { businessId, serviceName });
-            return {
-                status: 'failure',
-                message: `Calendar service '${serviceName}' not found.`,
-                data: {
-                    status: 'ERROR',
-                    message: `Calendar service '${serviceName}' not found.`
-                }
-            };
+        console.log(`🔍 [deleteEvent] Looking up calendar service: ${calendarName} for business: ${businessId}`);
+    const calendarService = await getCalendarServiceByBusinessIdAndName(db, businessId, calendarName);
+
+    if (!calendarService) {
+      console.error(`❌ [deleteEvent] Calendar service not found`, { businessId, calendarName });
+      return {
+        status: 'failure',
+        message: `Calendar service '${calendarName}' not found.`,
+        data: {
+          status: 'ERROR',
+          message: `Calendar service '${calendarName}' not found.`
         }
+      };
+    }
         
         console.log(`✅ [deleteEvent] Calendar service found:`, {
             id: calendarService.id,
@@ -72,7 +72,7 @@ export const deleteEvent = async ({
         console.log(`✅ [deleteEvent] Event deleted successfully from Google Calendar`);
         console.log(`📊 [deleteEvent] Deletion summary:`, {
             eventId,
-            serviceName,
+            calendarName,
             googleCalendarId,
             businessId,
             timestamp: new Date().toISOString()
@@ -93,7 +93,7 @@ export const deleteEvent = async ({
             errorType: error instanceof Error ? error.constructor.name : typeof error,
             errorMessage: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined,
-            serviceName,
+            calendarName,
             eventId,
             timestamp: new Date().toISOString()
         });
@@ -117,19 +117,19 @@ export const deleteEvent = async ({
 
 export const deleteEventSchema = {
     name: 'deleteEvent',
-    description: "Deletes a calendar event for a specific service and event ID. The event ID must be obtained from a previous call to listCalendarEvents.",
+    description: "Deletes a scheduled appointment for a specific calendar and event ID. Before using this function, first get the event ID from scheduled appointments.",
     parameters: {
         type: Type.OBJECT,
         properties: {
-            serviceName: {
+            calendarName: {
                 type: Type.STRING,
                 description: 'The name of the calendar service to delete the event from (e.g., "clinic_primary").'
             },
             eventId: {
                 type: Type.STRING,
-                description: 'The ID of the event to delete. This ID must be obtained from a previous call to listCalendarEvents. This tool will DELETE/CANCEL the appointment with this ID.'
+                description: 'The ID of the scheduled appointment to delete. Get this ID from scheduled appointments.'
             }
         },
-        required: ['serviceName', 'eventId']
+        required: ['calendarName', 'eventId']
     }
 };

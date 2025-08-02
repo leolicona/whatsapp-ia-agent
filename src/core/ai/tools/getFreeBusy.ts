@@ -208,16 +208,16 @@ const calculateFreePeriods = (
 };
 
 export const getCalendarFreeBusy = async ({
-  serviceName,
+  calendarName,
   timeFrame,
   env
 }: {
-  serviceName: string;
+  calendarName: string;
   timeFrame?: string;
   env: Env;
 }): Promise<ToolResponse<FreeBusyResponseData>> => {
-  console.log(`📅 [getCalendarFreeBusy] Retrieving free/busy information for service ${serviceName}${timeFrame ? ` for ${timeFrame}` : ' (default timeframe)'}`);
-  console.log(`🔍 Input parameters:`, { serviceName, timeFrame });
+  console.log(`📅 [getCalendarFreeBusy] Retrieving free/busy information for service ${calendarName}${timeFrame ? ` for ${timeFrame}` : ' (default timeframe)'}`);
+  console.log(`🔍 Input parameters:`, { calendarName, timeFrame });
   
   try {
     // Get database and calendar service configuration
@@ -232,13 +232,13 @@ export const getCalendarFreeBusy = async ({
       throw new Error('BUSINESS_ID environment variable is not set');
     }
     
-    console.log(`➡️ Calling getCalendarServiceByBusinessIdAndName with businessId: ${businessId}, serviceName: ${serviceName}`);
-    const calendarService = await getCalendarServiceByBusinessIdAndName(db, businessId, serviceName);
+    console.log(`➡️ Calling getCalendarServiceByBusinessIdAndName with businessId: ${businessId}, calendarName: ${calendarName}`);
+    const calendarService = await getCalendarServiceByBusinessIdAndName(db, businessId, calendarName);
     console.log(`📊 Calendar service found:`, calendarService);
     
     if (!calendarService) {
-      console.error(`❌ Calendar service not found`, { businessId, serviceName });
-      throw new Error(`Calendar service '${serviceName}' not found for business ${businessId}`);
+      console.error(`❌ Calendar service not found`, { businessId, calendarName });
+      throw new Error(`Calendar service '${calendarName}' not found for business ${businessId}`);
     }
     
     const { googleCalendarId, settings } = calendarService;
@@ -359,19 +359,19 @@ export const getCalendarFreeBusy = async ({
 
 export const getCalendarFreeBusySchema = {
   name: 'getCalendarFreeBusy',
-  description: 'FREE/BUSY INFORMATION TOOL ONLY - Retrieves free/busy information for a calendar service. Shows when the calendar is busy (has appointments) and when it\'s free (available). Supports natural language time frames like "today", "tomorrow", "this week", "next week", etc. This tool is specifically for checking calendar availability status, not for booking or deleting appointments.',
+  description: 'Check the availability of one or more calendars for a given time period. Supports natural language time frames like "today", "tomorrow", "this week", "next week", etc.',
   parameters: {
     type: Type.OBJECT,
     properties: {
-      serviceName: {
+      calendarName: {
         type: Type.STRING,
-        description: 'The name of the calendar service to retrieve free/busy information from (e.g., "general-check-ups", "pediatric-care", etc.). This must match a service name configured in the calendar_services table.'
+        description: 'The name of the calendar to retrieve free/busy information from (e.g., "clinic_primary", "pediatric_care", etc.).'
       },
       timeFrame: {
         type: Type.STRING,
         description: 'Optional time frame for retrieving free/busy information. Supports natural language like "today", "tomorrow", "this week", "next week", "monday", "next friday", etc. If omitted, defaults to today from current time to end of day.'
       }
     },
-    required: ['serviceName']
+    required: ['calendarName']
   }
 };
