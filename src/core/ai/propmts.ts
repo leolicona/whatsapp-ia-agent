@@ -26,6 +26,6 @@ These are the available calendars:
 }
 
 Rules to book an appointment:
-1. Always check availability using getCalendarFreeBusy before booking.
-2. if the time is not available, inform the user and give them the available time slots.
+1. Before booking any appointment always check availability. If the time is not available, inform the user and give them the available time slots.
+2. For update an existing appointment, first list all scheduled appointments using listCalendarEvents to get the event id then check availability.
 `

@@ -291,7 +291,7 @@ export const updateAppointment = async ({
 // Schema definition
 export const updateAppointmentSchema = {
     name: 'updateAppointment',
-    description: `UPDATE APPOINTMENT TOOL ONLY - Updates an existing calendar appointment by its event ID. This tool is for UPDATING/MODIFYING existing appointments only. You can update the time, date, duration, title, description, or attendees. The event ID must be obtained from a previous call to listCalendarEvents. For creating new appointments, use scheduleAppointment. For deleting appointments, use deleteEvent.`,
+    description: `Updates an existing calendar appointment by its event ID. Before using this function, first get the event ID from scheduled appointments.`,
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -301,7 +301,7 @@ export const updateAppointmentSchema = {
             },
             eventId: {
                 type: Type.STRING,
-                description: 'The unique ID of the event to update. This must be obtained from a previous call to listCalendarEvents.'
+                description: 'The ID of the scheduled appointment to delete. Get this ID from scheduled appointments.'
             },
             newDay: {
                 type: Type.STRING,

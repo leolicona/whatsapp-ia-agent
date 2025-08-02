@@ -45,6 +45,11 @@ const makeApiRequester = (config: ApiConfig) => {
         throw new Error(`API request failed: ${response.status} - ${errorText}`);
       }
 
+      // Handle 204 No Content responses (common for DELETE operations)
+      if (response.status === 204) {
+        return null;
+      }
+      
       const responseData = await response.json();
       return responseData;
     } catch (error) {
