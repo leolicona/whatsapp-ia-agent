@@ -1,5 +1,5 @@
 {
-  "name": "whatsapp-ia-agent",
+  "name": "chat-ya-wam",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
